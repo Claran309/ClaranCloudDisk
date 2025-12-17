@@ -1,7 +1,7 @@
 package jwt_util
 
 import (
-	"ClaranCloudDisk/config/config"
+	"ClaranCloudDisk/config"
 	"ClaranCloudDisk/model"
 	"time"
 
