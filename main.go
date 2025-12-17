@@ -1,7 +1,7 @@
 package main
 
 import (
-	"ClaranCloudDisk/config/config"
+	"ClaranCloudDisk/config"
 	"ClaranCloudDisk/dao/cache"
 	"ClaranCloudDisk/dao/mysql"
 	"ClaranCloudDisk/handler"

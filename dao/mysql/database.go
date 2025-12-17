@@ -1,7 +1,7 @@
 package mysql
 
 import (
-	"ClaranCloudDisk/config/config"
+	"ClaranCloudDisk/config"
 	"errors"
 	"time"
 
