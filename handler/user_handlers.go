@@ -70,11 +70,14 @@ func (h *UserHandler) InfoHandler(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	username, _ := c.Get("username")
 	role, _ := c.Get("role")
+	//调用服务层
+	UsedStorage, _ := h.userService.CheckStorage(userID.(int))
 	//返回响应
 	util.Success(c, gin.H{
-		"user_id":  userID,
-		"username": username,
-		"role":     role,
+		"user_id":      userID,
+		"username":     username,
+		"role":         role,
+		"used_storage": UsedStorage,
 	}, "Your information")
 }
 

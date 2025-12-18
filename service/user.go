@@ -6,6 +6,7 @@ import (
 	"ClaranCloudDisk/util"
 	"ClaranCloudDisk/util/jwt_util"
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -96,16 +97,10 @@ func (s *UserService) Login(loginKey, password string) (string, *model.User, err
 		return "", nil, errors.New("password error"), ""
 	}
 
-	//鉴权
-	role, err := s.UserRepo.GetRole(user)
-	if err != nil {
-		return "", nil, errors.New("get role error"), ""
-	}
-
 	//access token
-	token, err := s.jwtUtil.GenerateToken(user.UserID, user.Username, role, 1)
+	token, err := s.jwtUtil.GenerateToken(user.UserID, user.Username, user.Role, 1)
 	//refresh token
-	refreshToken, err := s.jwtUtil.GenerateToken(user.UserID, user.Username, role, 255)
+	refreshToken, err := s.jwtUtil.GenerateToken(user.UserID, user.Username, user.Role, 255)
 	if err != nil {
 		return "", nil, errors.New("token Error"), ""
 	}
@@ -132,4 +127,12 @@ func (s *UserService) Refresh(refreshToken model.RefreshTokenRequest) (string, e
 	}
 
 	return newToken, nil
+}
+
+func (s *UserService) CheckStorage(UserID int) (string, error) {
+	UsedStorage, err := s.UserRepo.GetStorage(UserID)
+	if err != nil {
+		return "", errors.New("get storage failed")
+	}
+	return fmt.Sprintf("%dG", UsedStorage), nil
 }

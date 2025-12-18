@@ -9,5 +9,5 @@ type UserRepository interface {
 	SelectByUsername(username string) (*model.User, error)
 	SelectByEmail(email string) (*model.User, error)
 	Exists(username, email string) bool
-	GetRole(user *model.User) (string, error)
+	GetStorage(userID int) (string, error)
 }

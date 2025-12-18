@@ -47,12 +47,14 @@ func main() {
 
 	r := gin.Default()
 
-	//=======================================注册和登录路由=============================================
+	//=======================================用户管理路由=============================================
 	user := r.Group("/user")
 	user.POST("/register", userHandler.Register)
 	user.POST("/login", userHandler.Login)
 	user.POST("/refresh", userHandler.Refresh)
 	user.GET("/info", jwtMiddleware.JWTAuthentication(), userHandler.InfoHandler)
+	user.POST("/logout", jwtMiddleware.JWTAuthentication(), userHandler.Logout)
+	user.PUT("/update", jwtMiddleware.JWTAuthentication(), userHandler.Update)
 
 	err = r.Run()
 	if err != nil {
