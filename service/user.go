@@ -6,7 +6,6 @@ import (
 	"ClaranCloudDisk/util"
 	"ClaranCloudDisk/util/jwt_util"
 	"errors"
-	"fmt"
 	"strings"
 )
 
@@ -53,7 +52,7 @@ func (s *UserService) Register(req *model.RegisterRequest) (*model.User, error) 
 		Password: hashedPassword, // 加密存储
 		Email:    req.Email,
 		Role:     req.Role,
-		Storage:  "0",
+		Storage:  0,
 	}
 
 	//传入数据库
@@ -132,12 +131,12 @@ func (s *UserService) Refresh(refreshToken model.RefreshTokenRequest) (string, e
 	return newToken, nil
 }
 
-func (s *UserService) CheckStorage(UserID int) (string, error) {
+func (s *UserService) CheckStorage(UserID int) (int64, error) {
 	UsedStorage, err := s.UserRepo.GetStorage(UserID)
 	if err != nil {
-		return "", errors.New("get storage failed")
+		return -1, errors.New("get storage failed")
 	}
-	return fmt.Sprintf("%dG", UsedStorage), nil
+	return UsedStorage, nil
 }
 
 func (s *UserService) Logout(token string) error {

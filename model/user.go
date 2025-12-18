@@ -6,6 +6,6 @@ type User struct {
 	Username string `json:"username" gorm:"column:username;uniqueIndex;type:varchar(50)"`
 	Email    string `json:"email" gorm:"column:email;uniqueIndex;type:varchar(100)"`
 	Password string `json:"-" gorm:"column:password;type:varchar(255)"`
-	Role     string `json:"role" gorm:"column:role;type:varchar(50)"`                 // admin/user
-	Storage  string `json:"used_storage" gorm:"column:used_storage;type:varchar(50)"` //以GB为单位
+	Role     string `json:"role" gorm:"column:role;type:varchar(50)"` // admin/user
+	Storage  int64  `json:"storage" gorm:"column:storage"`            // 以字节为单位
 }

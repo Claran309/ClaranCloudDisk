@@ -10,7 +10,7 @@ type UserRepository interface {
 	SelectByEmail(email string) (*model.User, error)
 	SelectByUserID(userId int) (model.User, error)
 	Exists(username, email string) bool
-	GetStorage(userID int) (string, error)
+	GetStorage(userID int) (int64, error)
 	UpdateUsername(userID int, username string) error
 	UpdatePassword(userID int, password string) error
 	UpdateEmail(userID int, email string) error

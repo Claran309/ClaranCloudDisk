@@ -270,7 +270,7 @@ func (repo *mysqlUserRepo) Exists(username, email string) bool {
 	return count > 0
 }
 
-func (repo *mysqlUserRepo) GetStorage(userID int) (string, error) {
+func (repo *mysqlUserRepo) GetStorage(userID int) (int64, error) {
 	//缓存
 	if repo.cache != nil {
 		cacheKey := fmt.Sprintf("user:id:%d", userID)
@@ -291,12 +291,12 @@ func (repo *mysqlUserRepo) GetStorage(userID int) (string, error) {
 				var user = model.User{}
 				err := repo.cache.Set(cacheKey, user, 1*time.Minute)
 				if err != nil {
-					return "", errors.New("set cache failed")
+					return -1, errors.New("set cache failed")
 				}
 			}
-			return "", errors.New("get storage failed")
+			return -1, errors.New("get storage failed")
 		}
-		return "", errors.New("get storage failed")
+		return -1, errors.New("get storage failed")
 	}
 
 	//写入缓存
@@ -309,19 +309,19 @@ func (repo *mysqlUserRepo) GetStorage(userID int) (string, error) {
 			userCacheKey := fmt.Sprintf("user:id:%d", user.UserID)
 			err := repo.cache.Set(userCacheKey, &user, repo.cache.RandExp(5*time.Minute))
 			if err != nil {
-				return "", errors.New("set cache failed")
+				return -1, errors.New("set cache failed")
 			}
 
 			usernameCacheKey := fmt.Sprintf("user:username:%s", user.Username)
 			err = repo.cache.Set(usernameCacheKey, &user, repo.cache.RandExp(5*time.Minute))
 			if err != nil {
-				return "", errors.New("set cache failed")
+				return -1, errors.New("set cache failed")
 			}
 
 			emailCacheKey := fmt.Sprintf("user:email:%s", user.Email)
 			err = repo.cache.Set(emailCacheKey, &user, repo.cache.RandExp(5*time.Minute))
 			if err != nil {
-				return "", errors.New("set cache failed")
+				return -1, errors.New("set cache failed")
 			}
 		}
 	}
