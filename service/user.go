@@ -11,14 +11,16 @@ import (
 )
 
 type UserService struct {
-	UserRepo mysql.UserRepository
-	jwtUtil  jwt_util.Util
+	UserRepo  mysql.UserRepository
+	TokenRepo mysql.TokenRepository
+	jwtUtil   jwt_util.Util
 }
 
-func NewUserService(userRepo mysql.UserRepository, jwtUtil jwt_util.Util) *UserService {
+func NewUserService(userRepo mysql.UserRepository, tokenRepo mysql.TokenRepository, jwtUtil jwt_util.Util) *UserService {
 	return &UserService{
-		UserRepo: userRepo,
-		jwtUtil:  jwtUtil,
+		UserRepo:  userRepo,
+		TokenRepo: tokenRepo,
+		jwtUtil:   jwtUtil,
 	}
 }
 
@@ -135,4 +137,13 @@ func (s *UserService) CheckStorage(UserID int) (string, error) {
 		return "", errors.New("get storage failed")
 	}
 	return fmt.Sprintf("%dG", UsedStorage), nil
+}
+
+func (s *UserService) Logout(token string) error {
+	//加入token黑名单
+	err := s.TokenRepo.AddBlackList(token)
+	if err != nil {
+		return errors.New("add black list failed")
+	}
+	return nil
 }

@@ -18,3 +18,8 @@ type LoginRequest struct {
 type RefreshTokenRequest struct {
 	RefreshToken string `json:"refresh_token" binding:"required"`
 }
+
+// LogoutRequest "/logout"
+type LogoutRequest struct {
+	Token string `json:"token" binding:"required"`
+}

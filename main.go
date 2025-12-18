@@ -36,14 +36,15 @@ func main() {
 
 	// dao
 	userRepo := mysql.NewMysqlUserRepo(db, redisClient.(*cache.RedisClient))
+	tokenRepo := mysql.NewMysqlTokenRepo(db, redisClient.(*cache.RedisClient))
 	// JWT工具
 	jwtUtil := jwt_util.NewJWTUtil(cfg)
 	// 业务逻辑层依赖
-	userService := services.NewUserService(userRepo, jwtUtil)
+	userService := services.NewUserService(userRepo, tokenRepo, jwtUtil)
 	// 处理器层依赖
 	userHandler := handlers.NewUserHandler(userService)
 	//创建中间件
-	jwtMiddleware := middleware.NewJWTMiddleware(jwtUtil)
+	jwtMiddleware := middleware.NewJWTMiddleware(jwtUtil, tokenRepo)
 
 	r := gin.Default()
 

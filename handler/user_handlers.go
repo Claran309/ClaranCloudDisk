@@ -101,3 +101,24 @@ func (h *UserHandler) Refresh(c *gin.Context) {
 		"new_token": token,
 	}, "RefreshToken successfully")
 }
+
+func (h *UserHandler) Logout(c *gin.Context) {
+	//绑定数据
+	var req model.LogoutRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		util.Error(c, 400, err.Error())
+		return
+	}
+
+	//调用服务层
+	err := h.userService.Logout(req.Token)
+	if err != nil {
+		util.Error(c, 500, err.Error())
+		return
+	}
+
+	//返回响应
+	util.Success(c, gin.H{
+		"status": "logout",
+	}, "Logout successfully")
+}

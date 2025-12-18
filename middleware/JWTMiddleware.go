@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"ClaranCloudDisk/dao/mysql"
 	"ClaranCloudDisk/util"
 	"ClaranCloudDisk/util/jwt_util"
 	"errors"
@@ -11,12 +12,14 @@ import (
 )
 
 type JWTMiddleware struct {
-	jwtUtil jwt_util.Util
+	jwtUtil   jwt_util.Util
+	TokenRepo mysql.TokenRepository
 }
 
-func NewJWTMiddleware(jwtUtil jwt_util.Util) *JWTMiddleware {
+func NewJWTMiddleware(jwtUtil jwt_util.Util, tokenRepo mysql.TokenRepository) *JWTMiddleware {
 	return &JWTMiddleware{
-		jwtUtil: jwtUtil,
+		jwtUtil:   jwtUtil,
+		TokenRepo: tokenRepo,
 	}
 }
 
@@ -38,6 +41,19 @@ func (m *JWTMiddleware) JWTAuthentication() gin.HandlerFunc {
 		}
 
 		tokenString := parts[1]
+
+		//检查token是否在黑名单里
+		status, err := m.TokenRepo.CheckBlackList(tokenString)
+		if err != nil {
+			util.Error(c, 401, err.Error())
+			c.Abort()
+			return
+		}
+		if status == "blacklisted" {
+			util.Error(c, 403, "token is blacklisted")
+			c.Abort()
+			return
+		}
 
 		token, err := m.jwtUtil.ValidateToken(tokenString)
 		if err != nil {
