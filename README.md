@@ -11,7 +11,7 @@ To-do List：
     - [x] JWT & role
     - [x] refresh_token
     - [x] 登出（token黑名单表）
-    - [ ] 更新信息
+    - [x] 更新信息
     - [x] 个人信息（存储空间）
   - [ ] 文件模块
     - [ ] 上传下载

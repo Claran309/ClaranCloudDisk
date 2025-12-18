@@ -138,6 +138,64 @@ func (repo *mysqlUserRepo) SelectByUsername(username string) (*model.User, error
 	return &user, nil
 }
 
+func (repo *mysqlUserRepo) SelectByUserID(userId int) (model.User, error) {
+	//尝试访问缓存
+	if repo.cache == nil {
+		key := fmt.Sprintf("user:id:%d", userId)
+		var user model.User
+		if err := repo.cache.Get(key, &user); err == nil {
+			return user, nil
+		}
+	}
+
+	//缓存未命中，查询数据库
+	var user model.User
+	err := repo.db.Where("user_id = ?", userId).First(&user).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			//缓存空值防止缓存穿透
+			if repo.cache != nil {
+				key := fmt.Sprintf("user:user_id:%d", userId)
+				fakeUser := model.User{}
+				err := repo.cache.Set(key, fakeUser, repo.cache.RandExp(5*time.Minute))
+				if err != nil {
+					return model.User{}, errors.New("set cache failed")
+				}
+			}
+			return model.User{}, errors.New("username select failed")
+		}
+		return model.User{}, errors.New("username select failed")
+	}
+
+	//写入缓存
+	if repo.cache != nil {
+		//分布式锁
+		lockKey := fmt.Sprintf("lock:user:user_id:%d", userId)
+		if suc, _ := repo.cache.Lock(lockKey, 10*time.Second); suc {
+			defer repo.cache.Unlock(lockKey)
+
+			userCacheKey := fmt.Sprintf("user:id:%d", user.UserID)
+			err := repo.cache.Set(userCacheKey, &user, repo.cache.RandExp(5*time.Minute))
+			if err != nil {
+				return model.User{}, errors.New("set cache failed")
+			}
+
+			usernameCacheKey := fmt.Sprintf("user:username:%s", user.Username)
+			err = repo.cache.Set(usernameCacheKey, &user, repo.cache.RandExp(5*time.Minute))
+			if err != nil {
+				return model.User{}, errors.New("set cache failed")
+			}
+
+			emailCacheKey := fmt.Sprintf("user:email:%s", user.Email)
+			err = repo.cache.Set(emailCacheKey, &user, repo.cache.RandExp(5*time.Minute))
+			if err != nil {
+				return model.User{}, errors.New("set cache failed")
+			}
+		}
+	}
+	return user, nil
+}
+
 func (repo *mysqlUserRepo) SelectByEmail(email string) (*model.User, error) {
 	// 缓存
 	if repo.cache != nil {
@@ -269,4 +327,124 @@ func (repo *mysqlUserRepo) GetStorage(userID int) (string, error) {
 	}
 
 	return user.Storage, nil
+}
+
+func (repo *mysqlUserRepo) UpdateUsername(userID int, username string) error {
+	var user model.User
+	err := repo.db.Model(&user).Where("user_id = ?", userID).Update("username", username).Error
+	if err != nil {
+		return errors.New("update user failed")
+	}
+
+	//更新后数据
+	err = repo.db.Where("user_id = ?", userID).First(&user).Error
+	if err != nil {
+		return errors.New("update user failed")
+	}
+
+	//写后删除缓存
+	err = repo.cache.Delete(fmt.Sprintf("user:id:%d", user.UserID))
+	if err != nil {
+		return errors.New("delete user failed")
+	}
+	err = repo.cache.Delete(fmt.Sprintf("user:username:%s", user.Username))
+	if err != nil {
+		return errors.New("delete user failed")
+	}
+	err = repo.cache.Delete(fmt.Sprintf("user:email:%s", user.Email))
+	if err != nil {
+		return errors.New("delete user failed")
+	}
+
+	return nil
+}
+
+func (repo *mysqlUserRepo) UpdatePassword(userID int, password string) error {
+	var user model.User
+	err := repo.db.Model(&user).Where("user_id = ?", userID).Update("password", password).Error
+	if err != nil {
+		return errors.New("update user failed")
+	}
+
+	//更新后数据
+	err = repo.db.Where("user_id = ?", userID).First(&user).Error
+	if err != nil {
+		return errors.New("update user failed")
+	}
+
+	//写后删除缓存
+	err = repo.cache.Delete(fmt.Sprintf("user:id:%d", user.UserID))
+	if err != nil {
+		return errors.New("delete user failed")
+	}
+	err = repo.cache.Delete(fmt.Sprintf("user:username:%s", user.Username))
+	if err != nil {
+		return errors.New("delete user failed")
+	}
+	err = repo.cache.Delete(fmt.Sprintf("user:email:%s", user.Email))
+	if err != nil {
+		return errors.New("delete user failed")
+	}
+
+	return nil
+}
+
+func (repo *mysqlUserRepo) UpdateEmail(userID int, email string) error {
+	var user model.User
+	err := repo.db.Model(&user).Where("user_id = ?", userID).Update("email", email).Error
+	if err != nil {
+		return errors.New("update user failed")
+	}
+
+	//更新后数据
+	err = repo.db.Where("user_id = ?", userID).First(&user).Error
+	if err != nil {
+		return errors.New("update user failed")
+	}
+
+	//写后删除缓存
+	err = repo.cache.Delete(fmt.Sprintf("user:id:%d", user.UserID))
+	if err != nil {
+		return errors.New("delete user failed")
+	}
+	err = repo.cache.Delete(fmt.Sprintf("user:username:%s", user.Username))
+	if err != nil {
+		return errors.New("delete user failed")
+	}
+	err = repo.cache.Delete(fmt.Sprintf("user:email:%s", user.Email))
+	if err != nil {
+		return errors.New("delete user failed")
+	}
+
+	return nil
+}
+
+func (repo *mysqlUserRepo) UpdateRole(userID int, role string) error {
+	var user model.User
+	err := repo.db.Model(&user).Where("user_id = ?", userID).Update("role", role).Error
+	if err != nil {
+		return errors.New("update user failed")
+	}
+
+	//更新后数据
+	err = repo.db.Where("user_id = ?", userID).First(&user).Error
+	if err != nil {
+		return errors.New("update user failed")
+	}
+
+	//写后删除缓存
+	err = repo.cache.Delete(fmt.Sprintf("user:id:%d", user.UserID))
+	if err != nil {
+		return errors.New("delete user failed")
+	}
+	err = repo.cache.Delete(fmt.Sprintf("user:username:%s", user.Username))
+	if err != nil {
+		return errors.New("delete user failed")
+	}
+	err = repo.cache.Delete(fmt.Sprintf("user:email:%s", user.Email))
+	if err != nil {
+		return errors.New("delete user failed")
+	}
+
+	return nil
 }

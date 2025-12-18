@@ -106,14 +106,14 @@ func (h *UserHandler) Logout(c *gin.Context) {
 	//绑定数据
 	var req model.LogoutRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		util.Error(c, 400, err.Error())
+		util.Error(c, 400, "BindJSON failed")
 		return
 	}
 
 	//调用服务层
 	err := h.userService.Logout(req.Token)
 	if err != nil {
-		util.Error(c, 500, err.Error())
+		util.Error(c, 500, "BindJSON failed")
 		return
 	}
 
@@ -121,4 +121,28 @@ func (h *UserHandler) Logout(c *gin.Context) {
 	util.Success(c, gin.H{
 		"status": "logout",
 	}, "Logout successfully")
+}
+
+func (h *UserHandler) Update(c *gin.Context) {
+	//绑定数据
+	UserID, _ := c.Get("user_id")
+	var req model.UpdateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		util.Error(c, 400, "BindJSON failed")
+		return
+	}
+
+	//调用服务层
+	user, err := h.userService.UpdateInfo(UserID.(int), req)
+	if err != nil {
+		util.Error(c, 500, "UpdateInfo failed")
+	}
+
+	//返回响应
+	util.Success(c, gin.H{
+		"username": user.Username,
+		"email":    user.Email,
+		"password": "*******",
+		"role":     user.Role,
+	}, "Update information successfully")
 }

@@ -53,6 +53,7 @@ func (s *UserService) Register(req *model.RegisterRequest) (*model.User, error) 
 		Password: hashedPassword, // 加密存储
 		Email:    req.Email,
 		Role:     req.Role,
+		Storage:  "0",
 	}
 
 	//传入数据库
@@ -146,4 +147,60 @@ func (s *UserService) Logout(token string) error {
 		return errors.New("add black list failed")
 	}
 	return nil
+}
+
+func (s *UserService) UpdateInfo(UserID int, req model.UpdateRequest) (model.User, error) {
+	if req.Username != "" {
+		err := s.UserRepo.UpdateUsername(UserID, req.Username)
+		if err != nil {
+			return model.User{}, err
+		}
+	}
+
+	if req.Email != "" {
+		//邮箱是否符合格式
+		if !strings.Contains(req.Email, "@") {
+			return model.User{}, errors.New("email format Error")
+		}
+		err := s.UserRepo.UpdateEmail(UserID, req.Email)
+		if err != nil {
+			return model.User{}, err
+		}
+	}
+
+	if req.Role != "" {
+		err := s.UserRepo.UpdateRole(UserID, req.Role)
+		if err != nil {
+			return model.User{}, err
+		}
+	}
+
+	if req.Password != "" {
+		//密码时候否符合格式
+		var flagPassword bool
+		for i := 0; i < len(req.Password); i++ {
+			if !((req.Password[i] >= 'a' && req.Password[i] <= 'z') || (req.Password[i] >= '0' && req.Password[i] <= '9') || (req.Password[i] >= 'A' && req.Password[i] <= 'Z')) {
+				flagPassword = true
+			}
+		}
+		if flagPassword {
+			return model.User{}, errors.New("password format Error")
+		}
+		//加密密码
+		hashedPassword, err := util.HashPassword(req.Password)
+		if err != nil {
+			return model.User{}, errors.New("password hash failed")
+		}
+		err = s.UserRepo.UpdatePassword(UserID, hashedPassword)
+		if err != nil {
+			return model.User{}, err
+		}
+	}
+
+	user, err := s.UserRepo.SelectByUserID(UserID)
+	if err != nil {
+		return model.User{}, err
+	}
+
+	return user, nil
 }

@@ -87,5 +87,19 @@ func main() {
 	Header:
 		Authorization : Bearer <Token>
 
+"/logout":
+	Header:
+		Authorization : Bearer <Token>
+	Body:
+		token
+
+"/update":
+	Header:
+		Authorization : Bearer <Token>
+	Body:
+		(username)
+		(email)
+		(password)
+		(role) (admin/user)
 ==================="/file"========================
 */

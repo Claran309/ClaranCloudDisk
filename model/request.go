@@ -1,6 +1,6 @@
 package model
 
-// RegisterRequest "/register"
+// RegisterRequest "/user/register"
 type RegisterRequest struct {
 	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
@@ -8,18 +8,26 @@ type RegisterRequest struct {
 	Role     string `json:"role" binding:"required"`
 }
 
-// LoginRequest "/login"
+// LoginRequest "/user/login"
 type LoginRequest struct {
 	LoginKey string `json:"login_key" binding:"required"`
 	Password string `json:"password" binding:"required"`
 }
 
-// RefreshTokenRequest "/refresh"
+// RefreshTokenRequest "/user/refresh"
 type RefreshTokenRequest struct {
 	RefreshToken string `json:"refresh_token" binding:"required"`
 }
 
-// LogoutRequest "/logout"
+// LogoutRequest "/user/logout"
 type LogoutRequest struct {
 	Token string `json:"token" binding:"required"`
+}
+
+// UpdateRequest "/user/update"
+type UpdateRequest struct {
+	Username string `json:"username" binding:"omitempty"`
+	Email    string `json:"email" binding:"omitempty"`
+	Password string `json:"password" binding:"omitempty"`
+	Role     string `json:"role" binding:"omitempty"`
 }

@@ -47,6 +47,10 @@ func (rc *RedisClient) Get(key string, dest interface{}) error {
 	return json.Unmarshal([]byte(data), dest)
 }
 
+func (rc *RedisClient) Delete(key string) error {
+	return rc.client.Del(rc.ctx, key).Err()
+}
+
 // RandExp 防止缓存雪崩
 func (rc *RedisClient) RandExp(base time.Duration) time.Duration {
 	jitter := rand.Int63n(int64(base/5)) - int64(base/10)
