@@ -51,6 +51,7 @@ func (repo *mysqlUserRepo) AddUser(user *model.User) error {
 	if err.Error != nil {
 		return err.Error
 	}
+
 	//写入缓存
 	if repo.cache != nil {
 		lockKey := fmt.Sprintf("lock:user:username:%s", user.Username)
@@ -225,32 +226,27 @@ func (repo *mysqlUserRepo) SelectByEmail(email string) (*model.User, error) {
 		return nil, errors.New("email select failed")
 	}
 
-	//写入缓存
+	//写后删除
 	if repo.cache != nil {
-		// 分布式锁
-		lockKey := fmt.Sprintf("lock:user:email:%s", email)
-		if success, _ := repo.cache.Lock(lockKey, 10*time.Second); success {
-			defer repo.cache.Unlock(lockKey)
+		userCacheKey := fmt.Sprintf("user:id:%d", user.UserID)
+		err := repo.cache.Delete(userCacheKey)
+		if err != nil {
+			return nil, errors.New("set cache failed")
+		}
 
-			userCacheKey := fmt.Sprintf("user:id:%d", user.UserID)
-			err := repo.cache.Set(userCacheKey, &user, repo.cache.RandExp(5*time.Minute))
-			if err != nil {
-				return nil, errors.New("set cache failed")
-			}
+		usernameCacheKey := fmt.Sprintf("user:username:%s", user.Username)
+		err = repo.cache.Delete(usernameCacheKey)
+		if err != nil {
+			return nil, errors.New("set cache failed")
+		}
 
-			usernameCacheKey := fmt.Sprintf("user:username:%s", user.Username)
-			err = repo.cache.Set(usernameCacheKey, &user, repo.cache.RandExp(5*time.Minute))
-			if err != nil {
-				return nil, errors.New("set cache failed")
-			}
-
-			emailCacheKey := fmt.Sprintf("user:email:%s", user.Email)
-			err = repo.cache.Set(emailCacheKey, &user, repo.cache.RandExp(5*time.Minute))
-			if err != nil {
-				return nil, errors.New("set cache failed")
-			}
+		emailCacheKey := fmt.Sprintf("user:email:%s", user.Email)
+		err = repo.cache.Delete(emailCacheKey)
+		if err != nil {
+			return nil, errors.New("set cache failed")
 		}
 	}
+
 	return &user, nil
 }
 
