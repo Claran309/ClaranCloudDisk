@@ -19,7 +19,7 @@ to-fix bugs:
 - [ ] File_Cache中分布式锁精细度过低
   > 针对不同total定制lock或使用yaml脚本进行原子操作
 
-- [ ] total自增兵法问题
+- [ ] total自增并发问题
   > yaml
 
 fixed bugs:
