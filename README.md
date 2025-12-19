@@ -4,6 +4,27 @@
 
 开发中...
 
+to-fix bugs:
+- [ ] File_Cache存在BigKey风险:
+  ```
+    // fileId - file
+	   // fileHash - file
+	   // userID:parentID:total - parentTotal
+	   // userID:parentID:id - file
+	   // userID:total - userTotal
+	   // userID:id - file
+  ``` 
+  >需重新设计缓存为分页缓存
+
+- [ ] File_Cache中分布式锁精细度过低
+  > 针对不同total定制lock或使用yaml脚本进行原子操作
+
+- [ ] total自增兵法问题
+  > yaml
+
+fixed bugs:
+- [x] 数据不一致风险
+
 To-do List：
 - [ ] 基本功能
   - [x] 用户模块
@@ -16,13 +37,14 @@ To-do List：
   - [ ] 文件模块
     - [ ] 上传下载
     - [ ] 删除
-    - [ ] 获取文件列表
+    - [ ] 获取文件列表（栈）
     - [ ] 重命名文件
     - [ ] 创建文件夹
     - [ ] 查看文件信息
 - [ ] 健康管理
 - [ ] 定时清理token黑名单
 - [x] Redis缓存
+    - [ ] files分页缓存
 - [ ] 文件哈希化实现秒传
 - [ ] 文件预览
 - [ ] 断点传续
