@@ -19,4 +19,5 @@ type UserRepository interface {
 	UpdatePassword(userID int, password string) error
 	UpdateEmail(userID int, email string) error
 	UpdateRole(userID int, role string) error
+	UpdateStorage(userID int, storage int64) error
 }

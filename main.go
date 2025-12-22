@@ -42,7 +42,7 @@ func main() {
 	jwtUtil := jwt_util.NewJWTUtil(cfg)
 	// 业务逻辑层依赖
 	userService := services.NewUserService(userRepo, tokenRepo, jwtUtil)
-	fileService := services.NewUFileService(fileRepo)
+	fileService := services.NewUFileService(fileRepo, userRepo, cfg.CloudFileDir, cfg.MaxFileSize)
 	// 处理器层依赖
 	userHandler := handlers.NewUserHandler(userService)
 	fileHandler := handlers.NewFileHandler(fileService)

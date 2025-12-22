@@ -450,3 +450,33 @@ func (repo *mysqlUserRepo) UpdateRole(userID int, role string) error {
 
 	return nil
 }
+
+func (repo *mysqlUserRepo) UpdateStorage(userID int, storage int64) error {
+	var user model.User
+	err := repo.db.Model(&user).Where("user_id = ?", userID).Update("storage", storage).Error
+	if err != nil {
+		return errors.New("update user failed")
+	}
+
+	//更新后数据
+	err = repo.db.Where("user_id = ?", userID).First(&user).Error
+	if err != nil {
+		return errors.New("update user failed")
+	}
+
+	//写后删除缓存
+	err = repo.cache.Delete(fmt.Sprintf("user:id:%d", user.UserID))
+	if err != nil {
+		return errors.New("delete user failed")
+	}
+	err = repo.cache.Delete(fmt.Sprintf("user:username:%s", user.Username))
+	if err != nil {
+		return errors.New("delete user failed")
+	}
+	err = repo.cache.Delete(fmt.Sprintf("user:email:%s", user.Email))
+	if err != nil {
+		return errors.New("delete user failed")
+	}
+
+	return nil
+}

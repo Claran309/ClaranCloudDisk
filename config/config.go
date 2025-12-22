@@ -20,6 +20,10 @@ type Config struct {
 	JWTIssuer      string
 	JWTExpireHours int
 
+	// Files
+	CloudFileDir string
+	MaxFileSize  int64
+
 	// mysql
 	DSN string
 
@@ -36,6 +40,8 @@ func LoadConfig() *Config {
 		JWTSecret:      getEnv("JWT_SECRET", ""),
 		JWTIssuer:      getEnv("JWT_ISSUER", ""),
 		JWTExpireHours: getEnvInt("JWT_EXPIRATION_HOURS", 24),
+		CloudFileDir:   getEnv("CLOUD_FILE_DIR", "D:\\"),
+		MaxFileSize:    int64(getEnvInt("MAX_FILE_SIZE", 25)), // 25 GB
 		DSN:            getEnv("DB_DSN", ""),
 		Redis: RedisConfig{
 			Addr:     getEnv("REDIS_ADDR", "127.0.0.1:6379"),
