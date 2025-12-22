@@ -31,3 +31,8 @@ type UpdateRequest struct {
 	Password string `json:"password" binding:"omitempty"`
 	Role     string `json:"role" binding:"omitempty"`
 }
+
+// RenameRequest "/file/:id/rename"
+type RenameRequest struct {
+	Name string `json:"name" binding:"required"`
+}

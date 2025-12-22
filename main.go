@@ -63,15 +63,12 @@ func main() {
 	//=======================================文件管理路由=============================================
 	file := r.Group("/file")
 	file.Use(jwtMiddleware.JWTAuthentication())
-	file.POST("/upload", fileHandler.Upload)          // 上传文件
-	file.GET("/:id/download", fileHandler.Download)   // 下载文件
-	file.GET("/:id", fileHandler.GetFileInfo)         // 获取文件详细信息
-	file.GET("/list", fileHandler.GetFileList)        // 获取文件列表
-	file.DELETE("/:id", fileHandler.Delete)           // 删除文件
-	file.POST("/folders", fileHandler.CreateFolder)   // 创建空文件夹
-	file.DELETE("/folders", fileHandler.DeleteFolder) // 删除空文件夹
-	file.PUT("/:id/rename", fileHandler.Rename)       // 重命名文件
-	file.PUT("/:id/move", fileHandler.Move)           // 移动文件
+	file.POST("/upload", fileHandler.Upload)        // 上传文件
+	file.GET("/:id/download", fileHandler.Download) // 下载文件
+	file.GET("/:id", fileHandler.GetFileInfo)       // 获取文件详细信息
+	file.GET("/list", fileHandler.GetFileList)      // 获取文件列表
+	file.DELETE("/:id", fileHandler.Delete)         // 删除文件
+	file.PUT("/:id/rename", fileHandler.Rename)     // 重命名文件
 	err = r.Run()
 	if err != nil {
 		panic("Failed to start Gin server: " + err.Error())
