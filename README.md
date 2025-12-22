@@ -25,7 +25,7 @@ to-fix bugs:
 fixed bugs:
 - [x] 数据不一致风险
 
-To-do List：
+To-do & done List：
 - [x] 基本功能
   - [x] 用户模块
     - [x] 登录与注册
