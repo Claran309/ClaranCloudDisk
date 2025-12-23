@@ -76,7 +76,7 @@ func (repo *mysqlTokenRepo) CheckBlackList(token string) (string, error) {
 	var status string
 	var exists int64
 	err := repo.db.Where("token = ?", token).Count(&exists).Error
-	if err != nil {
+	if err != nil && exists != 0 {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			//防穿透
 			if repo.cache != nil {
@@ -101,7 +101,7 @@ func (repo *mysqlTokenRepo) CheckBlackList(token string) (string, error) {
 			defer repo.cache.Unlock(lockKey)
 
 			blackListCacheKey := fmt.Sprintf("blacklist:token:%s", token)
-			err := repo.cache.Set(blackListCacheKey, "blacklisted", repo.cache.RandExp(5*time.Minute))
+			err := repo.cache.Set(blackListCacheKey, status, repo.cache.RandExp(5*time.Minute))
 			if err != nil {
 				return status, errors.New("set cache failed")
 			}

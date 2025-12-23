@@ -71,7 +71,10 @@ func (h *UserHandler) InfoHandler(c *gin.Context) {
 	username, _ := c.Get("username")
 	role, _ := c.Get("role")
 	//调用服务层
-	UsedStorage, _ := h.userService.CheckStorage(userID.(int))
+	UsedStorage, err := h.userService.CheckStorage(userID.(int))
+	if err != nil {
+		util.Error(c, 500, err.Error())
+	}
 	//返回响应
 	util.Success(c, gin.H{
 		"user_id":      userID,

@@ -3,6 +3,7 @@ package jwt_util
 import (
 	"ClaranCloudDisk/config"
 	"ClaranCloudDisk/model"
+	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -31,7 +32,7 @@ func (util *defaultJWTUtil) GenerateToken(userID int, username string, role stri
 		"sub":      userID,
 		"iat":      time.Now().Unix(),
 		"nbf":      time.Now().Unix(),
-		"exp":      time.Now().Add(util.config.ExpirationTime).Unix() * extraExpiration,
+		"exp":      time.Now().Add(util.config.ExpirationTime + time.Duration(extraExpiration)*time.Hour).Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -62,6 +63,7 @@ func (util *defaultJWTUtil) ValidateToken(tokenString string) (*jwt.Token, error
 
 func (util *defaultJWTUtil) ExtractClaims(token *jwt.Token) (jwt.MapClaims, error) {
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		fmt.Printf("生成的 JWT claims: %+v\n", claims)
 		return claims, nil
 	} else {
 		return nil, jwt.ErrTokenInvalidClaims

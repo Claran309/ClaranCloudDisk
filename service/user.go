@@ -123,7 +123,12 @@ func (s *UserService) Refresh(refreshToken model.RefreshTokenRequest) (string, e
 		return "", errors.New("extract claims failed")
 	}
 
-	newToken, err := s.jwtUtil.GenerateToken(claims["user_id"].(int), claims["username"].(string), claims["role"].(string), 1)
+	var userID int
+	if userIDFloat, ok := claims["user_id"].(float64); ok {
+		// 安全转换：float64 转 int
+		userID = int(userIDFloat)
+	}
+	newToken, err := s.jwtUtil.GenerateToken(userID, claims["username"].(string), claims["role"].(string), 1)
 	if err != nil {
 		return "", errors.New("token generate failed")
 	}

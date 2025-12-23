@@ -37,7 +37,7 @@ func LoadConfig() *Config {
 		log.Fatal("error loading .env file")
 	}
 	return &Config{
-		JWTSecret:      getEnv("JWT_SECRET", ""),
+		JWTSecret:      getEnv("JWT_SECRET_KEY", ""),
 		JWTIssuer:      getEnv("JWT_ISSUER", ""),
 		JWTExpireHours: getEnvInt("JWT_EXPIRATION_HOURS", 24),
 		CloudFileDir:   getEnv("CLOUD_FILE_DIR", "D:\\"),

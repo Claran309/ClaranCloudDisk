@@ -62,7 +62,7 @@ func (m *JWTMiddleware) JWTAuthentication() gin.HandlerFunc {
 				c.Abort()
 				return
 			}
-			util.Error(c, 401, "Token is invalid")
+			util.Error(c, 401, "Token is invalid:"+err.Error())
 			c.Abort()
 			return
 		}
@@ -73,9 +73,20 @@ func (m *JWTMiddleware) JWTAuthentication() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-
+		//fmt.Println("========================================")
+		if userIDFloat, ok := claims["user_id"].(float64); ok {
+			// 安全转换：float64 转 int
+			userID := int(userIDFloat)
+			c.Set("user_id", userID)
+		} else if userIDInt, ok := claims["user_id"].(int); ok {
+			// 如果已经是 int
+			c.Set("user_id", userIDInt)
+		} else {
+			util.Error(c, 401, "无效的 user_id 类型")
+			c.Abort()
+			return
+		}
 		c.Set("username", claims["username"])
-		c.Set("user_id", claims["user_id"])
 		c.Set("role", claims["role"])
 		c.Next()
 	}
