@@ -4,6 +4,14 @@
 
 开发中...
 
+## API接口文档: [Link](https://s.apifox.cn/eb440c56-e09f-4266-9843-3c8f1ae205c3)
+
+## API接口说明
+
+### 1.
+
+## 规划
+
 to-fix bugs:
 - [ ] File_Cache存在BigKey风险:
   ```
@@ -41,6 +49,7 @@ To-do & done List：
     - [x] 重命名文件
     - [x] 查看文件信息
 - [x] 文件哈希化实现秒传
+- [x] 编写api说明文档
 - [ ] 健康管理
 - [ ] 定时清理token黑名单
 - [ ] 完善错误抛出机制

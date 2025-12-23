@@ -79,40 +79,67 @@ func main() {
 各路由请求体应有数据：
 
 ===================="/user"======================
-"/register":
+"/register": 				POST
 	Body:
-		username
-		password
-		email
-		role (admin/user)
+		username 			[string]
+		password 			[string]
+		email				[string]
+		role (admin/user)   [string]
 
-"/login":
+"/login":					POST
 	Body:
-		login_key
-		password
+		login_key			[string]
+		password			[string]
 
-"/refresh":
+"/refresh": 				POST
 	Body:
-		refresh_token
+		refresh_token		[string]
 
-"/info":
+"/info": 					GET
 	Header:
 		Authorization : Bearer <Token>
 
-"/logout":
+"/logout": 					POST
 	Header:
 		Authorization : Bearer <Token>
 	Body:
-		token
+		token				[string]
 
-"/update":
+"/update": 					PUT
 	Header:
 		Authorization : Bearer <Token>
 	Body:
-		(username)
-		(email)
-		(password)
-		(role) (admin/user)
+		(username)			[string]
+		(email)				[string]
+		(password)			[string]
+		(role) (admin/user) [string]
 ==================="/file"========================
+"/upload": 					POST
+	Header:
+		Authorization : Bearer <Token>
+	Body:
+		file: <file>		[file]
+
+"/:id/download": 			GET
+	Header:
+		Authorization : Bearer <Token>
+
+"/:id": 					GET
+	Header:
+		Authorization : Bearer <Token>
+
+"/list": 					GET
+	Header:
+		Authorization : Bearer <Token>
+
+"/:id": 					DELETE
+	Header:
+		Authorization : Bearer <Token>
+
+"/:id/rename": 				PUT
+	Header:
+		Authorization : Bearer <Token>
+	Body:
+		name				[string]
 
 */
