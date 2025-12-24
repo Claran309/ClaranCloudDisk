@@ -6,6 +6,7 @@ import (
 	"ClaranCloudDisk/util"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"strconv"
 
@@ -185,4 +186,316 @@ func (h *FileHandler) Rename(c *gin.Context) {
 	util.Success(c, gin.H{
 		"data": file,
 	}, "重命名成功")
+}
+
+func (h *FileHandler) Preview(c *gin.Context) {
+	//捕获数据
+	userID := c.GetInt("user_id")
+	fileID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		util.Error(c, 400, "无效的文件ID")
+		return
+	}
+
+	//服务层获取文件信息
+	ctx := c.Request.Context()
+	file, err := h.fileService.GetFileInfo(ctx, userID, fileID)
+	if err != nil {
+		util.Error(c, 404, "文件不存在或无权访问: "+err.Error())
+		return
+	}
+
+	//是否存在
+	if _, err := os.Stat(file.Path); os.IsNotExist(err) {
+		util.Error(c, 404, "文件已丢失")
+		return
+	}
+
+	//服务层获取文件类型
+	fileType, err := h.fileService.GetMimeType(ctx, file)
+	if err != nil {
+		util.Error(c, 500, "获取文件类型失败: "+err.Error())
+		return
+	}
+	switch fileType {
+	case "image":
+		h.PreImage(c, file)
+	case "video":
+		h.PreVideo(c, file)
+	case "audio":
+		h.PreAudio(c, file)
+	case "document":
+		h.PreDoc(c, file)
+	case "text":
+		h.PreText(c, file)
+	case "other":
+		h.PreText(c, file) // // 其他类型尝试作为文本预览
+	default:
+		util.Error(c, 500, "未解析的文件类型")
+		return
+	}
+}
+
+func (h *FileHandler) PreImage(c *gin.Context, file *model.File) {
+	//设置响应头
+	ext := file.Ext
+	if ext == "svg" {
+		ext = "svg+xml"
+	}
+	MineType := "image/" + ext
+	c.Header("Content-Type", MineType)
+	c.Header("Cache-Control", "public, max-age=31536000") // 缓存1年
+
+	c.File(file.Path)
+}
+
+func (h *FileHandler) PreVideo(c *gin.Context, file *model.File) {
+	//设置响应头
+	ext := file.Ext
+	if ext == "mov" {
+		ext = "quicktime"
+	}
+	if ext == "avi" {
+		ext = "x-msvideo"
+	}
+	if ext == "mkv" {
+		ext = "x-matroska"
+	}
+	MineType := "video/" + ext
+	c.Header("Content-Type", MineType)
+	c.Header("Accept-Ranges", "bytes")
+
+	//神器
+	http.ServeFile(c.Writer, c.Request, file.Path)
+}
+
+func (h *FileHandler) PreAudio(c *gin.Context, file *model.File) {
+	//设置响应头
+	ext := file.Ext
+	if ext == "mp3" {
+		ext = "mpeg"
+	}
+	MineType := "audio/" + ext
+	c.Header("Content-Type", MineType)
+	c.Header("Accept-Ranges", "bytes")
+
+	//神器
+	http.ServeFile(c.Writer, c.Request, file.Path)
+}
+
+func (h *FileHandler) PreDoc(c *gin.Context, file *model.File) {
+	ext := file.Ext
+
+	switch ext {
+	case "pdf":
+		// PDF文件可以直接预览
+		c.Header("Content-Type", "application/pdf")
+		c.Header("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", file.Name))
+		c.File(file.Path)
+	case "txt", "md", "js", "css", "html", "json", "xml", "yaml", "yml":
+		// 文本类文件
+		h.PreText(c, file)
+	default:
+		// 其他文档类型，返回下载
+		c.Header("Content-Type", "application/octet-stream")
+		c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", file.Name))
+		c.File(file.Path)
+	}
+}
+
+func (h *FileHandler) PreText(c *gin.Context, file *model.File) {
+	c.Header("Content-Type", "text/plain; charset=utf-8")
+	c.Header("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", file.Name))
+
+	// 打开文件
+	fileContent, err := os.Open(file.Path)
+	if err != nil {
+		util.Error(c, 500, "打开文件失败: "+err.Error())
+		return
+	}
+	defer fileContent.Close()
+
+	// 发送文件内容
+	io.Copy(c.Writer, fileContent)
+}
+
+func (h *FileHandler) GetPreInfo(c *gin.Context) {
+	// 捕获数据
+	userID := c.GetInt("user_id")
+	fileID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		util.Error(c, 400, "无效的文件ID")
+		return
+	}
+
+	// 调用服务层获取文件信息
+	ctx := c.Request.Context()
+	file, err := h.fileService.GetFileInfo(ctx, userID, fileID)
+	if err != nil {
+		util.Error(c, 404, "文件不存在或无权访问: "+err.Error())
+		return
+	}
+
+	// 检查文件是否存在
+	if _, err := os.Stat(file.Path); os.IsNotExist(err) {
+		util.Error(c, 404, "文件已丢失")
+		return
+	}
+
+	//服务层获取文件类型
+	fileType, err := h.fileService.GetMimeType(ctx, file)
+	if err != nil {
+		util.Error(c, 500, "获取文件类型失败: "+err.Error())
+		return
+	}
+	if fileType == "document" {
+		fileType = "application"
+	}
+	//修改响应头
+	ext := file.Ext
+	if ext == "svg" {
+		ext = "svg+xml"
+	}
+	if ext == "mov" {
+		ext = "quicktime"
+	}
+	if ext == "avi" {
+		ext = "x-msvideo"
+	}
+	if ext == "mkv" {
+		ext = "x-matroska"
+	}
+	if ext == "mp3" {
+		ext = "mpeg"
+	}
+	if ext == "docx" {
+		ext = "vnd.openxmlformats-officedocument.wordprocessingml.document"
+	}
+	if ext == "doc" {
+		ext = "msword"
+	}
+	if ext == "xls" {
+		ext = "vnd.ms-excel"
+	}
+	if ext == "xlsx" {
+		ext = "vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+	}
+	if ext == "ppt" {
+		ext = "vnd.ms-powerpoint"
+	}
+	if ext == "pptx" {
+		ext = "vnd.openxmlformats-officedocument.presentationml.presentation"
+	}
+	if ext == "txt" {
+		ext = "plain"
+	}
+	if ext == "js" {
+		ext = "javascript"
+	}
+	if ext == "md" {
+		ext = "markdown"
+	}
+	MimeType := fileType + "/" + ext
+	// 设置响应头
+	c.Header("Content-Type", MimeType)
+	c.Header("Accept-Ranges", "bytes")
+
+	// 让Gin处理Range请求
+	c.File(file.Path)
+}
+
+func (h *FileHandler) GetContent(c *gin.Context) {
+	// 捕获数据
+	userID := c.GetInt("user_id")
+	fileID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		util.Error(c, 400, "无效的文件ID")
+		return
+	}
+
+	// 调用服务层获取文件信息
+	ctx := c.Request.Context()
+	file, err := h.fileService.GetFileInfo(ctx, userID, fileID)
+	if err != nil {
+		util.Error(c, 404, "文件不存在或无权访问: "+err.Error())
+		return
+	}
+
+	//服务层获取文件类型
+	fileType, err := h.fileService.GetMimeType(ctx, file)
+	if err != nil {
+		util.Error(c, 500, "获取文件类型失败: "+err.Error())
+		return
+	}
+	if fileType == "document" {
+		fileType = "application"
+	}
+	//修改响应头
+	ext := file.Ext
+	if ext == "svg" {
+		ext = "svg+xml"
+	}
+	if ext == "mov" {
+		ext = "quicktime"
+	}
+	if ext == "avi" {
+		ext = "x-msvideo"
+	}
+	if ext == "mkv" {
+		ext = "x-matroska"
+	}
+	if ext == "mp3" {
+		ext = "mpeg"
+	}
+	if ext == "docx" {
+		ext = "vnd.openxmlformats-officedocument.wordprocessingml.document"
+	}
+	if ext == "doc" {
+		ext = "msword"
+	}
+	if ext == "xls" {
+		ext = "vnd.ms-excel"
+	}
+	if ext == "xlsx" {
+		ext = "vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+	}
+	if ext == "ppt" {
+		ext = "vnd.ms-powerpoint"
+	}
+	if ext == "pptx" {
+		ext = "vnd.openxmlformats-officedocument.presentationml.presentation"
+	}
+	if ext == "txt" {
+		ext = "plain"
+	}
+	if ext == "js" {
+		ext = "javascript"
+	}
+	if ext == "md" {
+		ext = "markdown"
+	}
+	MimeType := fileType + "/" + ext
+
+	canPreview := true
+	if fileType == "other" {
+		canPreview = false
+	}
+	// 返回预览信息
+	previewInfo := gin.H{
+		"id":           file.ID,
+		"name":         file.Name,
+		"size":         file.Size,
+		"mime_type":    MimeType,
+		"category":     fileType,
+		"can_preview":  canPreview,
+		"extension":    file.Ext,
+		"preview_url":  fmt.Sprintf("/api/files/%d/preview", file.ID),
+		"content_url":  fmt.Sprintf("/api/files/%d/content", file.ID),
+		"download_url": fmt.Sprintf("/api/files/%d/download", file.ID),
+		"created_at":   file.CreatedAt,
+	}
+
+	util.Success(c, gin.H{
+		"file": previewInfo,
+	}, "获取预览信息成功")
 }

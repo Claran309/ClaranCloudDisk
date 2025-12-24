@@ -15,6 +15,7 @@ type File struct {
 	Size     int64  `json:"size"`                              // 文件大小（字节）
 	Hash     string `gorm:"size:64;index" json:"hash"`         // 文件哈希（用于秒传）
 	MimeType string `gorm:"size:100" json:"mime_type"`         // 文件类型
+	Ext      string `gorm:"size:10" json:"ext"`                // 文件拓展名
 
 	// 文件元数据
 	IsDir    bool  `gorm:"default:false;index" json:"is_dir"` // 是否是文件夹

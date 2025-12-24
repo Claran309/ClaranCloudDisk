@@ -53,6 +53,8 @@ func (s *FileService) Upload(ctx context.Context, userID int, file multipart.Fil
 			}
 		}
 		// 创建文件记录（秒传）
+		ext := filepath.Ext(fileHeader.Filename)
+		ext = ext[1:]
 		newFile := &model.File{
 			UserID:   uint(userID),
 			Name:     fileHeader.Filename,
@@ -61,6 +63,7 @@ func (s *FileService) Upload(ctx context.Context, userID int, file multipart.Fil
 			Size:     fileHeader.Size,
 			Hash:     hash,
 			MimeType: fileHeader.Header.Get("Content-Type"),
+			Ext:      ext,
 		}
 
 		//数据层
@@ -84,6 +87,8 @@ func (s *FileService) Upload(ctx context.Context, userID int, file multipart.Fil
 	}
 
 	// 创建文件记录
+	ext := filepath.Ext(fileHeader.Filename)
+	ext = ext[1:]
 	newFile := &model.File{
 		UserID:   uint(userID),
 		Name:     fileHeader.Filename,
@@ -92,6 +97,7 @@ func (s *FileService) Upload(ctx context.Context, userID int, file multipart.Fil
 		Size:     fileHeader.Size,
 		Hash:     hash,
 		MimeType: fileHeader.Header.Get("Content-Type"),
+		Ext:      ext,
 	}
 	if err := s.FileRepo.Create(ctx, newFile); err != nil {
 		// 回滚
@@ -253,4 +259,44 @@ func (s *FileService) UpdateUserStorage(ctx context.Context, userID uint, sizeDe
 	if err != nil {
 		return
 	}
+}
+
+func (s *FileService) GetMimeType(ctx context.Context, file *model.File) (string, error) {
+	image := []string{"jpg", "jpeg", "png", "gif", "bmp", "webp", "svg"}
+	video := []string{"mp4", "avi", "mov", "wmv", "flv", "mkv", "webm"}
+	audio := []string{"mp3", "wav", "flac", "aac", "ogg", "m4a"}
+	document := []string{"docx", "doc", "pdf", "xls", "xlsx", "ppt", "pptx"}
+	text := []string{"txt", "html", "js", "xml", "csv", "md", "yaml", "yml"}
+	archive := []string{"zip", "rar", "7z", "tar", "gz"}
+	for _, ext := range image {
+		if file.Ext == ext {
+			return "image", nil
+		}
+	}
+	for _, ext := range video {
+		if file.Ext == ext {
+			return "video", nil
+		}
+	}
+	for _, ext := range audio {
+		if file.Ext == ext {
+			return "audio", nil
+		}
+	}
+	for _, ext := range document {
+		if file.Ext == ext {
+			return "document", nil
+		}
+	}
+	for _, ext := range text {
+		if file.Ext == ext {
+			return "text", nil
+		}
+	}
+	for _, ext := range archive {
+		if file.Ext == ext {
+			return "archive", nil
+		}
+	}
+	return "other", nil
 }
