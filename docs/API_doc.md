@@ -565,6 +565,204 @@ Content-Transfer-Encoding: binary
 - 404: 文件不存在
 - 500: 重命名失败
 
+### 7. 预览文件
+预览指定ID的文件内容，支持多种文件类型。
+
+- **URL**: `/file/{id}/preview`
+- **方法**: `GET`
+- **认证**: 需要 Bearer Token
+- **Content-Type**: 无
+
+**请求头**:
+
+| 请求头 | 值 | 说明 |
+|--------|----|------|
+| Authorization | Bearer {token} | 访问令牌 |
+
+**路径参数**:
+
+| 参数名 | 类型 | 必填 | 说明 | 示例 |
+|--------|------|------|------|------|
+| id | integer | 是 | 文件ID | 1 |
+
+**功能说明**:
+- 支持预览的文件类型：图片、视频、音频、文档、文本
+- 图片类型：直接返回图片流
+- 视频/音频类型：支持HTTP范围请求，支持断点续传
+- 文档类型：PDF直接预览，文本类返回文本内容，其他类型转为下载
+- 文本类型：返回UTF-8编码的文本内容
+- 其他类型：尝试作为文本预览
+
+**响应**:
+- 成功：根据文件类型返回对应的Content-Type和文件流
+- 失败：返回JSON错误信息
+
+**响应头示例**:
+```
+# 图片文件
+Content-Type: image/jpeg
+Cache-Control: public, max-age=31536000
+
+# 视频文件
+Content-Type: video/mp4
+Accept-Ranges: bytes
+
+# PDF文件
+Content-Type: application/pdf
+Content-Disposition: inline; filename="example.pdf"
+
+# 文本文件
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline; filename="example.txt"
+```
+
+**错误码**:
+- 400: 无效的文件ID
+- 401: 令牌无效
+- 403: 无权限访问该文件
+- 404: 文件不存在或文件已丢失
+- 500: 获取文件类型失败或服务器内部错误
+
+### 8. 获取文件原始内容
+获取文件的原始字节流，支持HTTP范围请求。
+
+- **URL**: `/file/{id}/content`
+- **方法**: `GET`
+- **认证**: 需要 Bearer Token
+- **Content-Type**: 无
+
+**请求头**:
+
+| 请求头 | 值 | 说明 |
+|--------|----|------|
+| Authorization | Bearer {token} | 访问令牌 |
+
+**路径参数**:
+
+| 参数名 | 类型 | 必填 | 说明 | 示例 |
+|--------|------|------|------|------|
+| id | integer | 是 | 文件ID | 1 |
+
+**功能说明**:
+- 返回文件的原始字节流
+- 支持HTTP Range请求，用于大文件的分段下载
+- 自动设置正确的Content-Type响应头
+- 包含各种文件扩展名的MIME类型映射
+
+**HTTP Range请求示例**:
+```http
+GET /file/1/content HTTP/1.1
+Authorization: Bearer {token}
+Range: bytes=0-1023
+```
+
+**响应**:
+- 成功：返回文件字节流
+- 部分内容（206）：当使用Range请求时返回
+- 失败：返回JSON错误信息
+
+**响应头示例**:
+```
+Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+Accept-Ranges: bytes
+Content-Length: 102400
+Content-Range: bytes 0-1023/102400  # 仅在使用Range请求时包含
+```
+
+**响应状态码**:
+- 200: 完整文件内容
+- 206: 部分内容（Range请求）
+- 400: 无效的文件ID或Range范围
+- 401: 令牌无效
+- 403: 无权限访问该文件
+- 404: 文件不存在
+- 416: 请求的范围不可满足
+- 500: 服务器内部错误
+
+### 9. 获取文件预览信息
+获取文件的详细预览信息和相关URL。
+
+- **URL**: `/file/{id}/preview-info`
+- **方法**: `GET`
+- **认证**: 需要 Bearer Token
+- **Content-Type**: 无
+
+**请求头**:
+
+| 请求头 | 值 | 说明 |
+|--------|----|------|
+| Authorization | Bearer {token} | 访问令牌 |
+
+**路径参数**:
+
+| 参数名 | 类型 | 必填 | 说明 | 示例 |
+|--------|------|------|------|------|
+| id | integer | 是 | 文件ID | 1 |
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "获取预览信息成功",
+  "data": {
+    "file": {
+      "id": 1,
+      "name": "example.docx",
+      "size": 1024000,
+      "mime_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "category": "application",
+      "can_preview": true,
+      "extension": "docx",
+      "preview_url": "/api/files/1/preview",
+      "content_url": "/api/files/1/content",
+      "download_url": "/api/files/1/download",
+      "created_at": "2023-10-01T12:00:00Z"
+    }
+  }
+}
+```
+
+**响应字段说明**:
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| id | integer | 文件ID |
+| name | string | 文件名 |
+| size | integer | 文件大小（字节） |
+| mime_type | string | 完整的MIME类型 |
+| category | string | 文件分类：image, video, audio, application, text, other |
+| can_preview | boolean | 是否支持预览 |
+| extension | string | 文件扩展名 |
+| preview_url | string | 预览文件URL |
+| content_url | string | 获取文件内容URL |
+| download_url | string | 下载文件URL |
+| created_at | string | 创建时间 |
+
+**错误码**:
+- 400: 无效的文件ID
+- 401: 令牌无效
+- 403: 无权限访问该文件
+- 404: 文件不存在
+- 500: 获取文件类型失败或服务器内部错误
+
+### 10. 支持的预览文件类型
+
+| 文件分类 | 扩展名 | 预览方式 | 备注 |
+|----------|--------|----------|------|
+| 图片 | jpg, jpeg, png, gif, bmp, webp, svg | 直接显示 | SVG转为svg+xml类型 |
+| 视频 | mp4, webm, avi, mov, mkv, wmv, flv | 流媒体播放 | 支持HTTP Range请求 |
+| 音频 | mp3, wav, ogg, aac, flac, m4a | 音频播放 | MP3转为mpeg类型 |
+| 文档 | pdf, doc, docx, xls, xlsx, ppt, pptx | PDF内嵌/文本/下载 | PDF可内嵌，Office文档需转换 |
+| 文本 | txt, md, js, css, html, json, xml, yaml, yml | 文本显示 | 直接返回文本内容 |
+| 其他 | 其他扩展名 | 尝试文本预览 | 无法预览时转为下载 |
+
+**注意**:
+1. 预览接口会根据文件类型自动设置正确的Content-Type
+2. 视频和音频文件支持HTTP Range请求，适合大文件流式传输
+3. 某些文档类型可能需要前端使用特定组件预览（如Office文件）
+4. 文件内容接口更适合需要原始字节流的场景，如视频播放器
+5. 预览信息接口可用于前端判断文件是否可预览并获取相关URL
+
 ---
 
 ## 认证机制说明
