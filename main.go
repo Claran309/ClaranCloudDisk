@@ -38,14 +38,17 @@ func main() {
 	userRepo := mysql.NewMysqlUserRepo(db, redisClient.(*cache.RedisClient))
 	tokenRepo := mysql.NewMysqlTokenRepo(db, redisClient.(*cache.RedisClient))
 	fileRepo := mysql.NewMysqlFileRepo(db, redisClient.(*cache.RedisClient))
+	shareRepo := mysql.NewMysqlShareRepo(db, redisClient.(*cache.RedisClient))
 	// JWT工具
 	jwtUtil := jwt_util.NewJWTUtil(cfg)
 	// 业务逻辑层依赖
 	userService := services.NewUserService(userRepo, tokenRepo, jwtUtil)
 	fileService := services.NewUFileService(fileRepo, userRepo, cfg.CloudFileDir, cfg.MaxFileSize)
+	shareService := services.NewShareService(shareRepo, fileRepo, userRepo)
 	// 处理器层依赖
 	userHandler := handlers.NewUserHandler(userService)
 	fileHandler := handlers.NewFileHandler(fileService)
+	shareHandler := handlers.NewShareHandler(shareService)
 	//创建中间件
 	jwtMiddleware := middleware.NewJWTMiddleware(jwtUtil, tokenRepo)
 
@@ -72,6 +75,17 @@ func main() {
 	file.GET("/:id/preview", fileHandler.Preview)         // 预览文件
 	file.GET("/:id/content", fileHandler.GetContent)      // 获取文件内容
 	file.GET("/:id/preview-info", fileHandler.GetPreInfo) // 获取预览信息
+	//=======================================分享管理路由=============================================
+	share := r.Group("/share")
+	share.Use(jwtMiddleware.JWTAuthentication())
+	share.POST("/create", shareHandler.CreateShare)       // 新建分享
+	share.GET("/mine", shareHandler.CheckMine)            // 查看自己的分享列表
+	share.DELETE("/:unique_id", shareHandler.DeleteShare) // 删除分享
+	share.GET("/:unique_id", shareHandler.CheckMine)      // 查看分享
+	//下载或转存全部文件 = 逐个下载share下的全部文件
+	share.GET("/:unique_id/:file_id/download", shareHandler.DownloadSpecFile) // 下载指定文件
+	share.POST("/:unique_id/:file_id/save", shareHandler.SaveSpecFile)        // 转存指定文件
+
 	err = r.Run()
 	if err != nil {
 		panic("Failed to start Gin server: " + err.Error())

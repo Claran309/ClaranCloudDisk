@@ -29,37 +29,35 @@ func NewMysqlTokenRepo(db *gorm.DB, cache *cache.RedisClient) TokenRepository {
 }
 
 func (repo *mysqlTokenRepo) AddBlackList(token string) error {
-	if token == "" {
-		return errors.New("token is empty")
-	}
+	return repo.db.Transaction(func(tx *gorm.DB) error {
+		if token == "" {
+			return errors.New("token is empty")
+		}
 
-	var exists int64
-	repo.db.Model(&model.BlackList{}).Where("token = ?", token).Count(&exists)
-	if exists > 0 {
-		return errors.New("token has been blacklisted")
-	}
+		var exists int64
+		repo.db.Model(&model.BlackList{}).Where("token = ?", token).Count(&exists)
+		if exists > 0 {
+			return errors.New("token has been blacklisted")
+		}
 
-	var blackList = model.BlackList{
-		Token: token,
-	}
-	err := repo.db.Create(&blackList).Error
-	if err != nil {
-		return errors.New("failed to add blacklist")
-	}
+		var blackList = model.BlackList{
+			Token: token,
+		}
+		err := repo.db.Create(&blackList).Error
+		if err != nil {
+			return errors.New("failed to add blacklist")
+		}
 
-	if repo.cache != nil {
-		lockKey := fmt.Sprintf("lock:blacklist:token:%s", blackList.Token)
-		if suc, _ := repo.cache.Lock(lockKey, 10*time.Second); suc {
-			defer repo.cache.Unlock(lockKey)
-
+		if repo.cache != nil {
 			blackListCacheKey := fmt.Sprintf("blacklist:token:%s", blackList.Token)
-			err := repo.cache.Set(blackListCacheKey, "blacklisted", repo.cache.RandExp(5*time.Minute))
+			err := repo.cache.Delete(blackListCacheKey)
 			if err != nil {
 				return errors.New("set cache failed")
 			}
+
 		}
-	}
-	return nil
+		return nil
+	})
 }
 
 func (repo *mysqlTokenRepo) CheckBlackList(token string) (string, error) {
