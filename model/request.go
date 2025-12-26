@@ -36,3 +36,10 @@ type UpdateRequest struct {
 type RenameRequest struct {
 	Name string `json:"name" binding:"required"`
 }
+
+// CreateShareRequest "/share/create"
+type CreateShareRequest struct {
+	FileIDs    []uint `json:"file_ids" binding:"required,min=1"`
+	Password   string `json:"password"`
+	ExpireDays int    `json:"expire_days"`
+}

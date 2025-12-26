@@ -44,7 +44,7 @@ func main() {
 	// 业务逻辑层依赖
 	userService := services.NewUserService(userRepo, tokenRepo, jwtUtil)
 	fileService := services.NewUFileService(fileRepo, userRepo, cfg.CloudFileDir, cfg.MaxFileSize)
-	shareService := services.NewShareService(shareRepo, fileRepo, userRepo)
+	shareService := services.NewShareService(shareRepo, fileRepo, userRepo, cfg.CloudFileDir)
 	// 处理器层依赖
 	userHandler := handlers.NewUserHandler(userService)
 	fileHandler := handlers.NewFileHandler(fileService)

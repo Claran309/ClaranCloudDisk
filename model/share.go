@@ -28,3 +28,13 @@ type ShareFile struct {
 	Share Share `gorm:"foreignKey:ShareID" json:"-"`
 	File  File  `gorm:"foreignKey:FileID" json:"file,omitempty"`
 }
+
+type ShareInfoResponse struct {
+	Share        *Share     `json:"share"`
+	Files        []*File    `json:"files"`
+	NeedPassword bool       `json:"need_password"`
+	IsExpired    bool       `json:"is_expired"`
+	ExpireTime   *time.Time `json:"expire_time,omitempty"`
+	TotalSize    int64      `json:"total_size"`
+	FileCount    int        `json:"file_count"`
+}

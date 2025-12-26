@@ -60,7 +60,7 @@ func (repo *mysqlShareRepo) GetShareByUniqueID(ctx context.Context, uniqueID str
 		cacheKey := fmt.Sprintf("share:unique_id:%s", uniqueID)
 		var share *model.Share
 		if err := repo.cache.Get(cacheKey, &share); err == nil {
-			if repo.isExp(ctx, share) {
+			if repo.IsExp(share) {
 				//已过期，删除缓存
 				err := repo.cache.Delete(cacheKey)
 				if err != nil {
@@ -68,7 +68,7 @@ func (repo *mysqlShareRepo) GetShareByUniqueID(ctx context.Context, uniqueID str
 				}
 			} else {
 				//预加载
-				if err := repo.loadFiles(ctx, share); err == nil {
+				if err := repo.LoadFiles(ctx, share); err == nil {
 					return share, nil
 				}
 			}
@@ -94,7 +94,7 @@ func (repo *mysqlShareRepo) GetShareByUniqueID(ctx context.Context, uniqueID str
 	}
 
 	//预加载
-	if err := repo.loadFiles(ctx, &share); err != nil {
+	if err := repo.LoadFiles(ctx, &share); err != nil {
 		return nil, err
 	}
 
@@ -115,7 +115,7 @@ func (repo *mysqlShareRepo) GetShareByUniqueID(ctx context.Context, uniqueID str
 
 	return &share, nil
 }
-func (repo *mysqlShareRepo) GetUserShares(ctx context.Context, userID uint, pageSize int) ([]*model.Share, int64, error) {
+func (repo *mysqlShareRepo) GetUserShares(ctx context.Context, userID uint) ([]*model.Share, int64, error) {
 	//cache
 	if repo.cache == nil {
 		cacheKey := fmt.Sprintf("user_shares:%d", userID)
@@ -143,7 +143,7 @@ func (repo *mysqlShareRepo) GetUserShares(ctx context.Context, userID uint, page
 	}
 
 	for _, share := range shares {
-		if err := repo.loadFiles(ctx, share); err == nil {
+		if err := repo.LoadFiles(ctx, share); err == nil {
 			// 记录错误，但不中断整个查询
 			fmt.Printf("加载分享文件失败 (分享ID: %d): %v\n", share.ID, err)
 		}
@@ -208,14 +208,14 @@ func (repo *mysqlShareRepo) DeleteShare(ctx context.Context, shareID uint) error
 		return nil
 	})
 }
-func (repo *mysqlShareRepo) isExp(ctx context.Context, share *model.Share) bool {
+func (repo *mysqlShareRepo) IsExp(share *model.Share) bool {
 	expTime := share.CreatedAt.Add(time.Duration(share.Exp) * time.Hour * 24)
 	if expTime.After(time.Now()) {
 		return false
 	}
 	return true
 }
-func (repo *mysqlShareRepo) loadFiles(ctx context.Context, share *model.Share) error {
+func (repo *mysqlShareRepo) LoadFiles(ctx context.Context, share *model.Share) error {
 	var shareFiles []model.ShareFile
 	err := repo.db.WithContext(ctx).Where("share_id = ?", share.ID).Preload("Files").Find(&shareFiles).Error
 	if err != nil {
