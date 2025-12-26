@@ -4,6 +4,8 @@
 
 本文档描述 ClaranCloudDisk 云盘系统的 REST API 接口。系统分为用户管理和文件管理两大模块，采用 JWT 认证方式
 
+> 注：本文档由Deepseek根据后端源码编写
+
 ## 基础信息
 
 - **Base URL**: `http://your-domain.com/api`
@@ -762,6 +764,427 @@ Content-Range: bytes 0-1023/102400  # 仅在使用Range请求时包含
 3. 某些文档类型可能需要前端使用特定组件预览（如Office文件）
 4. 文件内容接口更适合需要原始字节流的场景，如视频播放器
 5. 预览信息接口可用于前端判断文件是否可预览并获取相关URL
+
+## 分享管理模块
+
+### 1. 创建文件分享
+创建文件分享链接，支持设置密码和过期时间。
+
+- **URL**: `/share/create`
+- **方法**: `POST`
+- **认证**: 需要 Bearer Token
+- **Content-Type**: `application/json`
+
+**请求头**:
+
+| 请求头 | 值 | 说明 |
+|--------|----|------|
+| Authorization | Bearer {token} | 访问令牌 |
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 说明 | 示例 | 限制 |
+|--------|------|------|------|------|------|
+| file_ids | array | 是 | 要分享的文件ID数组 | [1, 2, 3] | 至少包含一个文件ID |
+| password | string | 否 | 分享密码，为空表示无密码 | "123456" | 可选 |
+| expire_days | integer | 否 | 过期天数，0表示永久有效 | 7 | 可选，默认7天 |
+
+**请求体示例**:
+```json
+{
+  "file_ids": [1, 2, 3],
+  "password": "123456",
+  "expire_days": 7
+}
+```
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "分享创建成功",
+  "data": {
+    "share": {
+      "id": 1,
+      "unique_id": "abc123def456",
+      "user_id": 1,
+      "exp": 168,
+      "created_at": "2023-10-01T12:00:00Z"
+    },
+    "share_url": "http://your-domain.com/api/share/abc123def456",
+    "password": true,
+    "expire_days": 7,
+    "expire_time": "2023-10-08T12:00:00Z"
+  }
+}
+```
+
+**响应字段说明**:
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| share.id | integer | 分享ID |
+| share.unique_id | string | 分享唯一标识符 |
+| share.user_id | integer | 创建者用户ID |
+| share.exp | integer | 过期小时数（exp字段的单位是小时） |
+| share.created_at | string | 创建时间 |
+| share_url | string | 完整的分享链接 |
+| password | boolean | 是否有密码 |
+| expire_days | integer | 过期天数 |
+| expire_time | string | 过期时间 |
+
+**错误码**:
+- 400: 请求参数错误或未选择文件
+- 401: 令牌无效
+- 403: 无权限分享某些文件
+- 404: 文件不存在
+- 500: 创建分享失败
+
+### 2. 获取我的分享列表
+获取当前用户创建的所有分享列表。
+
+- **URL**: `/share/mine`
+- **方法**: `GET`
+- **认证**: 需要 Bearer Token
+- **Content-Type**: 无
+
+**请求头**:
+
+| 请求头 | 值 | 说明 |
+|--------|----|------|
+| Authorization | Bearer {token} | 访问令牌 |
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "获取成功",
+  "data": {
+    "shares": [
+      {
+        "id": 1,
+        "unique_id": "abc123def456",
+        "user_id": 1,
+        "exp": 168,
+        "created_at": "2023-10-01T12:00:00Z",
+        "user": {
+          "user_id": 1,
+          "username": "john_doe"
+        },
+        "files": [
+          {
+            "id": 1,
+            "share_id": 1,
+            "file_id": 1,
+            "file": {
+              "id": 1,
+              "user_id": 1,
+              "name": "example.txt",
+              "filename": "example_12345.txt",
+              "path": "/uploads/example.txt",
+              "size": 1024,
+              "mime_type": "text/plain",
+              "ext": "txt",
+              "is_dir": false,
+              "is_shared": true,
+              "created_at": "2023-10-01T10:00:00Z"
+            }
+          }
+        ]
+      }
+    ],
+    "total": 1
+  }
+}
+```
+
+**响应字段说明**:
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| shares[].id | integer | 分享ID |
+| shares[].unique_id | string | 分享唯一标识符 |
+| shares[].user_id | integer | 创建者用户ID |
+| shares[].exp | integer | 过期小时数 |
+| shares[].created_at | string | 创建时间 |
+| shares[].user.user_id | integer | 用户ID |
+| shares[].user.username | string | 用户名 |
+| shares[].files[].id | integer | 分享文件关联ID |
+| shares[].files[].file_id | integer | 文件ID |
+| shares[].files[].share_id | integer | 分享ID |
+| shares[].files[].file.id | integer | 文件ID |
+| shares[].files[].file.user_id | integer | 文件所有者ID |
+| shares[].files[].file.name | string | 原始文件名 |
+| shares[].files[].file.filename | string | 存储文件名 |
+| shares[].files[].file.path | string | 文件存储路径 |
+| shares[].files[].file.size | integer | 文件大小（字节） |
+| shares[].files[].file.mime_type | string | 文件MIME类型 |
+| shares[].files[].file.ext | string | 文件扩展名 |
+| shares[].files[].file.is_dir | boolean | 是否是文件夹 |
+| shares[].files[].file.is_shared | boolean | 是否已分享 |
+| shares[].files[].file.created_at | string | 文件创建时间 |
+| total | integer | 分享总数 |
+
+**错误码**:
+- 401: 令牌无效
+- 500: 获取分享列表失败
+
+### 3. 删除分享
+删除指定的分享链接。
+
+- **URL**: `/share/{unique_id}`
+- **方法**: `DELETE`
+- **认证**: 需要 Bearer Token
+- **Content-Type**: 无
+
+**请求头**:
+
+| 请求头 | 值 | 说明 |
+|--------|----|------|
+| Authorization | Bearer {token} | 访问令牌 |
+
+**路径参数**:
+
+| 参数名 | 类型 | 必填 | 说明 | 示例 |
+|--------|------|------|------|------|
+| unique_id | string | 是 | 分享唯一标识符 | "abc123def456" |
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "删除分享成功",
+  "data": {}
+}
+```
+
+**错误码**:
+- 401: 令牌无效
+- 403: 无权限删除该分享
+- 404: 分享不存在
+- 500: 删除失败
+
+### 4. 获取分享信息
+查看指定分享的详细信息，包括文件列表。
+
+- **URL**: `/share/{unique_id}`
+- **方法**: `GET`
+- **认证**: 需要 Bearer Token
+- **Content-Type**: 无
+
+**请求头**:
+
+| 请求头 | 值 | 说明 |
+|--------|----|------|
+| Authorization | Bearer {token} | 访问令牌 |
+
+**路径参数**:
+
+| 参数名 | 类型 | 必填 | 说明 | 示例 |
+|--------|------|------|------|------|
+| unique_id | string | 是 | 分享唯一标识符 | "abc123def456" |
+
+**查询参数**:
+
+| 参数名 | 类型 | 必填 | 说明 | 示例 |
+|--------|------|------|------|------|
+| password | string | 否 | 分享密码（如需密码） | "123456" |
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "获取分享信息成功",
+  "data": {
+    "share": {
+      "id": 1,
+      "unique_id": "abc123def456",
+      "user_id": 1,
+      "exp": 168,
+      "created_at": "2023-10-01T12:00:00Z"
+    },
+    "files": [
+      {
+        "id": 1,
+        "user_id": 1,
+        "name": "example.txt",
+        "filename": "example_12345.txt",
+        "path": "/uploads/example.txt",
+        "size": 1024,
+        "hash": "a1b2c3d4e5f6",
+        "mime_type": "text/plain",
+        "ext": "txt",
+        "is_dir": false,
+        "is_shared": true,
+        "created_at": "2023-10-01T10:00:00Z"
+      }
+    ],
+    "need_password": false,
+    "is_expired": false,
+    "expire_time": "2023-10-08T12:00:00Z",
+    "share_url": "http://your-domain.com/api/share/abc123def456",
+    "total_size": 1024,
+    "file_count": 1
+  }
+}
+```
+
+**响应字段说明**:
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| share.id | integer | 分享ID |
+| share.unique_id | string | 分享唯一标识符 |
+| share.user_id | integer | 创建者用户ID |
+| share.exp | integer | 过期小时数 |
+| share.created_at | string | 创建时间 |
+| files[].id | integer | 文件ID |
+| files[].user_id | integer | 文件所有者ID |
+| files[].name | string | 原始文件名 |
+| files[].filename | string | 存储文件名 |
+| files[].path | string | 文件存储路径 |
+| files[].size | integer | 文件大小（字节） |
+| files[].hash | string | 文件哈希值（用于秒传） |
+| files[].mime_type | string | 文件MIME类型 |
+| files[].ext | string | 文件扩展名 |
+| files[].is_dir | boolean | 是否是文件夹 |
+| files[].is_shared | boolean | 是否已分享 |
+| files[].created_at | string | 文件创建时间 |
+| need_password | boolean | 是否需要密码 |
+| is_expired | boolean | 是否已过期 |
+| expire_time | string | 过期时间 |
+| share_url | string | 完整的分享链接 |
+| total_size | integer | 所有文件总大小（字节） |
+| file_count | integer | 文件数量 |
+
+**错误码**:
+- 400: 无效的分享ID
+- 401: 令牌无效或密码错误
+- 403: 分享已过期
+- 404: 分享不存在
+- 500: 服务器内部错误
+
+### 5. 下载分享中的文件
+下载分享中的指定文件。
+
+- **URL**: `/share/{unique_id}/{file_id}/download`
+- **方法**: `GET`
+- **认证**: 需要 Bearer Token
+- **Content-Type**: 无
+
+**请求头**:
+
+| 请求头 | 值 | 说明 |
+|--------|----|------|
+| Authorization | Bearer {token} | 访问令牌 |
+
+**路径参数**:
+
+| 参数名 | 类型 | 必填 | 说明 | 示例 |
+|--------|------|------|------|------|
+| unique_id | string | 是 | 分享唯一标识符 | "abc123def456" |
+| file_id | integer | 是 | 文件ID | 1 |
+
+**查询参数**:
+
+| 参数名 | 类型 | 必填 | 说明 | 示例 |
+|--------|------|------|------|------|
+| password | string | 否 | 分享密码（如需密码） | "123456" |
+
+**响应**:
+- 成功: 返回文件流，响应头包含文件信息
+- 失败: 返回JSON错误信息
+
+**响应头示例**:
+```
+Content-Type: application/octet-stream
+Content-Disposition: attachment; filename="example.txt"
+Content-Length: 1024
+Content-Transfer-Encoding: binary
+```
+
+**错误码**:
+- 400: 无效的分享ID或文件ID
+- 401: 令牌无效或密码错误
+- 403: 无权限访问或分享已过期
+- 404: 分享或文件不存在
+- 500: 服务器内部错误
+
+### 6. 转存分享中的文件
+将分享中的指定文件转存到自己的云盘中。
+
+- **URL**: `/share/{unique_id}/{file_id}/save`
+- **方法**: `POST`
+- **认证**: 需要 Bearer Token
+- **Content-Type**: 无
+
+**请求头**:
+
+| 请求头 | 值 | 说明 |
+|--------|----|------|
+| Authorization | Bearer {token} | 访问令牌 |
+
+**路径参数**:
+
+| 参数名 | 类型 | 必填 | 说明 | 示例 |
+|--------|------|------|------|------|
+| unique_id | string | 是 | 分享唯一标识符 | "abc123def456" |
+| file_id | integer | 是 | 文件ID | 1 |
+
+**查询参数**:
+
+| 参数名 | 类型 | 必填 | 说明 | 示例 |
+|--------|------|------|------|------|
+| password | string | 否 | 分享密码（如需密码） | "123456" |
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "文件转存成功",
+  "data": {
+    "file": {
+      "id": 5,
+      "user_id": 2,
+      "name": "example.txt",
+      "filename": "example_copy_12345.txt",
+      "path": "/uploads/example_copy.txt",
+      "size": 1024,
+      "hash": "a1b2c3d4e5f6",
+      "mime_type": "text/plain",
+      "ext": "txt",
+      "is_dir": false,
+      "is_shared": false,
+      "created_at": "2023-10-01T13:00:00Z"
+    }
+  }
+}
+```
+
+**响应字段说明**:
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| file.id | integer | 转存后的文件ID |
+| file.user_id | integer | 转存者用户ID |
+| file.name | string | 原始文件名 |
+| file.filename | string | 存储文件名 |
+| file.path | string | 文件存储路径 |
+| file.size | integer | 文件大小（字节） |
+| file.hash | string | 文件哈希值 |
+| file.mime_type | string | 文件MIME类型 |
+| file.ext | string | 文件扩展名 |
+| file.is_dir | boolean | 是否是文件夹 |
+| file.is_shared | boolean | 是否已分享 |
+| file.created_at | string | 转存时间 |
+
+**错误码**:
+- 400: 无效的分享ID或文件ID
+- 401: 令牌无效或密码错误
+- 403: 无权限访问或分享已过期
+- 404: 分享或文件不存在
+- 409: 文件名冲突
+- 500: 转存失败
 
 ---
 
