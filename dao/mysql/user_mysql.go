@@ -328,6 +328,65 @@ func (repo *mysqlUserRepo) GetStorage(userID int) (int64, error) {
 	return user.Storage, nil
 }
 
+func (repo *mysqlUserRepo) GetVIP(userID int) (bool, error) {
+	//缓存
+	if repo.cache != nil {
+		cacheKey := fmt.Sprintf("user:id:%d", userID)
+		var user model.User
+		if err := repo.cache.Get(cacheKey, &user); err == nil {
+			return user.IsVIP, nil
+		}
+	}
+
+	//数据库
+	var user *model.User
+	err := repo.db.Where("user_id = ?", userID).First(&user).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// 防止缓存穿透
+			if repo.cache != nil {
+				cacheKey := fmt.Sprintf("user:id:%d", userID)
+				var user = model.User{}
+				err := repo.cache.Set(cacheKey, user, 1*time.Minute)
+				if err != nil {
+					return false, errors.New("set cache failed")
+				}
+			}
+			return false, errors.New("get user status failed")
+		}
+		return false, errors.New("get user status failed")
+	}
+
+	//写入缓存
+	if repo.cache != nil {
+		// 分布式锁
+		lockKey := fmt.Sprintf("lock:user:id:%d", user.UserID)
+		if success, _ := repo.cache.Lock(lockKey, 10*time.Second); success {
+			defer repo.cache.Unlock(lockKey)
+
+			userCacheKey := fmt.Sprintf("user:id:%d", user.UserID)
+			err := repo.cache.Set(userCacheKey, &user, repo.cache.RandExp(5*time.Minute))
+			if err != nil {
+				return false, errors.New("set cache failed")
+			}
+
+			usernameCacheKey := fmt.Sprintf("user:username:%s", user.Username)
+			err = repo.cache.Set(usernameCacheKey, &user, repo.cache.RandExp(5*time.Minute))
+			if err != nil {
+				return false, errors.New("set cache failed")
+			}
+
+			emailCacheKey := fmt.Sprintf("user:email:%s", user.Email)
+			err = repo.cache.Set(emailCacheKey, &user, repo.cache.RandExp(5*time.Minute))
+			if err != nil {
+				return false, errors.New("set cache failed")
+			}
+		}
+	}
+
+	return user.IsVIP, nil
+}
+
 func (repo *mysqlUserRepo) UpdateUsername(userID int, username string) error {
 	return repo.db.Transaction(func(tx *gorm.DB) error {
 		var user model.User

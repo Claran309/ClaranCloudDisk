@@ -21,8 +21,10 @@ type Config struct {
 	JWTExpireHours int
 
 	// Files
-	CloudFileDir string
-	MaxFileSize  int64
+	CloudFileDir         string
+	MaxFileSize          int64 // 单个文件大小限制 (GB)
+	NormalUserMaxStorage int64 // 非VIP用户存储空间限制 (GB)
+	LimitedSpeed         int64 // 非VIP用户下载速度限额 (MB) - 0 为不限速
 
 	// mysql
 	DSN string
@@ -37,12 +39,14 @@ func LoadConfig() *Config {
 		log.Fatal("error loading .env file")
 	}
 	return &Config{
-		JWTSecret:      getEnv("JWT_SECRET_KEY", ""),
-		JWTIssuer:      getEnv("JWT_ISSUER", ""),
-		JWTExpireHours: getEnvInt("JWT_EXPIRATION_HOURS", 24),
-		CloudFileDir:   getEnv("CLOUD_FILE_DIR", "D:\\"),
-		MaxFileSize:    int64(getEnvInt("MAX_FILE_SIZE", 25)), // 25 GB
-		DSN:            getEnv("DB_DSN", ""),
+		JWTSecret:            getEnv("JWT_SECRET_KEY", ""),
+		JWTIssuer:            getEnv("JWT_ISSUER", ""),
+		JWTExpireHours:       getEnvInt("JWT_EXPIRATION_HOURS", 24),
+		CloudFileDir:         getEnv("CLOUD_FILE_DIR", "D:\\"),
+		MaxFileSize:          int64(getEnvInt("MAX_FILE_SIZE", 25)),            // 25 GB
+		NormalUserMaxStorage: int64(getEnvInt("NORMAL_USER_MAX_STORAGE", 100)), //100 GB
+		LimitedSpeed:         int64(getEnvInt("LIMITED_SPEED", 10)),            // 10 MB/s
+		DSN:                  getEnv("DB_DSN", ""),
 		Redis: RedisConfig{
 			Addr:     getEnv("REDIS_ADDR", "127.0.0.1:6379"),
 			Password: getEnv("REDIS_PASSWORD", ""),

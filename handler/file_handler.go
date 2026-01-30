@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -70,8 +71,8 @@ func (h *FileHandler) Download(c *gin.Context) {
 
 	//调用服务
 	ctx := c.Request.Context()
-	file, err := h.fileService.Download(ctx, userID, fileID)
-	if err != nil {
+	file, limitedSpeed, err := h.fileService.Download(ctx, userID, fileID)
+	if err != nil || limitedSpeed == -1 {
 		util.Error(c, 404, "文件不存在或无权访问: "+err.Error())
 		return
 	}
@@ -94,7 +95,57 @@ func (h *FileHandler) Download(c *gin.Context) {
 	}
 	defer fileContent.Close()
 
-	io.Copy(c.Writer, fileContent)
+	// 不限速
+	if limitedSpeed == 0 {
+		io.Copy(c.Writer, fileContent)
+		return
+	}
+
+	// 限速处理
+	bufferSize := int64(64 * 1024) // 64KB缓冲区
+	if limitedSpeed < bufferSize {
+		bufferSize = limitedSpeed
+	}
+
+	buf := make([]byte, bufferSize)
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			// 每秒最多读取limitedSpeed字节
+			bytesRead := int64(0)
+			for bytesRead < limitedSpeed {
+				remaining := limitedSpeed - bytesRead
+				readSize := remaining
+				if readSize > bufferSize {
+					readSize = bufferSize
+				}
+
+				// 读取文件
+				n, err := fileContent.Read(buf[:readSize])
+				if n > 0 {
+					// 写入HTTP响应
+					_, writeErr := c.Writer.Write(buf[:n])
+					if writeErr != nil {
+						return
+					}
+					c.Writer.Flush()      // 立即发送给客户端
+					bytesRead += int64(n) // 累计已读取字节
+				}
+
+				if err != nil {
+					if err == io.EOF {
+						return // 文件读取完成
+					}
+					return
+				}
+			}
+		case <-ctx.Done():
+			return // 上下文取消
+		}
+	}
 }
 
 // GetFileInfo /:id

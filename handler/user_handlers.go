@@ -146,6 +146,7 @@ func (h *UserHandler) Update(c *gin.Context) {
 		"username": user.Username,
 		"email":    user.Email,
 		"password": "*******",
+		"is_vip":   user.IsVIP,
 		"role":     user.Role,
 	}, "Update information successfully")
 }

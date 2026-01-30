@@ -29,6 +29,7 @@ type UpdateRequest struct {
 	Username string `json:"username" binding:"omitempty"`
 	Email    string `json:"email" binding:"omitempty"`
 	Password string `json:"password" binding:"omitempty"`
+	IsVIP    bool   `json:"is_vip" binding:"omitempty"`
 	Role     string `json:"role" binding:"omitempty"`
 }
 

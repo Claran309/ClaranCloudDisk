@@ -13,6 +13,7 @@ type UserRepository interface {
 	SelectByUserID(userId int) (model.User, error)
 	Exists(username, email string) bool
 	GetStorage(userID int) (int64, error)
+	GetVIP(userID int) (bool, error)
 
 	// 更新
 	UpdateUsername(userID int, username string) error

@@ -15,25 +15,43 @@ import (
 )
 
 type FileService struct {
-	FileRepo    mysql.FileRepository
-	UserRepo    mysql.UserRepository
-	uploadDir   string
-	MaxFileSize int64
+	FileRepo             mysql.FileRepository
+	UserRepo             mysql.UserRepository
+	uploadDir            string
+	MaxFileSize          int64
+	NormalUserMaxStorage int64
+	LimitedSpeed         int64
 }
 
-func NewUFileService(fileRepo mysql.FileRepository, userRepo mysql.UserRepository, uploadDir string, maxFileSize int64) *FileService {
+func NewUFileService(fileRepo mysql.FileRepository, userRepo mysql.UserRepository, uploadDir string, maxFileSize int64, NormalUserMaxStorage int64, LimitedSpeed int64) *FileService {
 	return &FileService{
-		FileRepo:    fileRepo,
-		UserRepo:    userRepo,
-		uploadDir:   uploadDir,
-		MaxFileSize: maxFileSize * 1073741824, // GB -> 字节
+		FileRepo:             fileRepo,
+		UserRepo:             userRepo,
+		uploadDir:            uploadDir,
+		MaxFileSize:          maxFileSize * 1073741824, // GB -> 字节
+		NormalUserMaxStorage: NormalUserMaxStorage * 1073741824,
+		LimitedSpeed:         LimitedSpeed * 1048576, // MB -> 字节
 	}
 }
 
 func (s *FileService) Upload(ctx context.Context, userID int, file multipart.File, fileHeader *multipart.FileHeader) (*model.File, error) {
-	// 验证文件大小
+	isVIP, err := s.UserRepo.GetVIP(userID)
+	if err != nil {
+		return nil, fmt.Errorf("获取用户信息失败")
+	}
+
+	// 验证单个文件大小
 	if fileHeader.Size > s.MaxFileSize {
-		return nil, fmt.Errorf("文件大小不能超过 %.2fGB", float64(s.MaxFileSize)/(1024*1024*1024))
+		return nil, fmt.Errorf("单个文件大小不能超过 %.2fGB", float64(s.MaxFileSize)/(1024*1024*1024))
+	}
+
+	// 验证用户是否拥有足够存储空间
+	userStorage, err := s.UserRepo.GetStorage(userID)
+	if err != nil {
+		return nil, fmt.Errorf("获取用户信息失败")
+	}
+	if !isVIP && fileHeader.Size+userStorage > s.NormalUserMaxStorage {
+		return nil, fmt.Errorf("非VIP用户总存储空间已超额！")
 	}
 
 	// 计算Hash
@@ -111,24 +129,32 @@ func (s *FileService) Upload(ctx context.Context, userID int, file multipart.Fil
 	return newFile, nil
 }
 
-func (s *FileService) Download(ctx context.Context, userID int, fileID int64) (*model.File, error) {
+func (s *FileService) Download(ctx context.Context, userID int, fileID int64) (*model.File, int64, error) {
 	//获取信息
 	file, err := s.FileRepo.FindByID(ctx, uint(fileID))
 	if err != nil {
-		return nil, fmt.Errorf("文件不存在: %v", err)
+		return nil, -1, fmt.Errorf("文件不存在: %v", err)
+	}
+	isVIP, err := s.UserRepo.GetVIP(userID)
+	if err != nil {
+		return nil, -1, fmt.Errorf("获取用户信息失败")
+	}
+	LimitedSpeed := s.LimitedSpeed
+	if isVIP {
+		LimitedSpeed = 0
 	}
 
 	//鉴权
 	if file.UserID != uint(userID) {
-		return nil, fmt.Errorf("无权访问此文件")
+		return nil, -1, fmt.Errorf("无权访问此文件")
 	}
 
 	//检查是否存在
 	if _, err := os.Stat(file.Path); os.IsNotExist(err) {
-		return nil, fmt.Errorf("文件已丢失")
+		return nil, -1, fmt.Errorf("文件已丢失")
 	}
 
-	return file, nil
+	return file, LimitedSpeed, nil
 }
 
 func (s *FileService) GetFileList(ctx context.Context, userID int) ([]*model.File, int, error) {
