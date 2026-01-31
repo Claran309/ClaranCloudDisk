@@ -27,7 +27,7 @@ func (h *UserHandler) Register(c *gin.Context) {
 	}
 
 	//调用服务层
-	user, err := h.userService.Register(&req)
+	user, invitaionCode, err := h.userService.Register(&req)
 	if err != nil {
 		util.Error(c, 500, err.Error())
 		return
@@ -35,9 +35,11 @@ func (h *UserHandler) Register(c *gin.Context) {
 
 	//返回响应
 	util.Success(c, gin.H{
-		"username": user.Username,
-		"user_id":  user.UserID,
-		"email":    user.Email,
+		"username":        user.Username,
+		"user_id":         user.UserID,
+		"email":           user.Email,
+		"inviter":         invitaionCode.CreatorUserID,
+		"invitation_code": invitaionCode.Code,
 	}, "RegisterRequest registered successfully")
 }
 
@@ -149,4 +151,37 @@ func (h *UserHandler) Update(c *gin.Context) {
 		"is_vip":   user.IsVIP,
 		"role":     user.Role,
 	}, "Update information successfully")
+}
+
+func (h *UserHandler) GenerateInvitationCode(c *gin.Context) {
+	//绑定数据
+	UserID, _ := c.Get("user_id")
+
+	//调用服务层
+	invitationCode, err := h.userService.GenerateInvitationCode(UserID.(int))
+	if err != nil {
+		util.Error(c, 500, "Generate Invitation Code failed")
+	}
+
+	//返回响应
+	util.Success(c, gin.H{
+		"invitation_code": invitationCode,
+	}, "generate invitation code successfully")
+}
+
+func (h *UserHandler) InvitationCodeList(c *gin.Context) {
+	//绑定数据
+	UserID, _ := c.Get("user_id")
+
+	//调用服务层
+	invitationCodes, total, err := h.userService.InvitationCodeList(UserID.(int))
+	if err != nil {
+		util.Error(c, 500, "Get Invitation Code List failed")
+	}
+
+	//返回响应
+	util.Success(c, gin.H{
+		"total":                total,
+		"invitation_code_list": invitationCodes,
+	}, "获取成功")
 }

@@ -5,7 +5,9 @@ import (
 	"ClaranCloudDisk/model"
 	"ClaranCloudDisk/util"
 	"ClaranCloudDisk/util/jwt_util"
+	"crypto/rand"
 	"errors"
+	"math/big"
 	"strings"
 )
 
@@ -23,7 +25,13 @@ func NewUserService(userRepo mysql.UserRepository, tokenRepo mysql.TokenReposito
 	}
 }
 
-func (s *UserService) Register(req *model.RegisterRequest) (*model.User, error) {
+func (s *UserService) Register(req *model.RegisterRequest) (*model.User, *model.InvitationCode, error) {
+	//邀请码是否正确
+	invitationCode, err := s.UserRepo.ValidateInvitationCode(req.InviteCode)
+	if err != nil {
+		return nil, nil, errors.New("邀请码不正确")
+	}
+
 	//密码时候否符合格式
 	var flagPassword bool
 	for i := 0; i < len(req.Password); i++ {
@@ -32,18 +40,18 @@ func (s *UserService) Register(req *model.RegisterRequest) (*model.User, error) 
 		}
 	}
 	if flagPassword {
-		return nil, errors.New("password format Error")
+		return nil, nil, errors.New("password format Error")
 	}
 
 	//邮箱是否符合格式
 	if !strings.Contains(req.Email, "@") {
-		return nil, errors.New("email format Error")
+		return nil, nil, errors.New("email format Error")
 	}
 
 	//加密密码
 	hashedPassword, err := util.HashPassword(req.Password)
 	if err != nil {
-		return nil, errors.New("password hash failed")
+		return nil, nil, errors.New("password hash failed")
 	}
 
 	//创建用户
@@ -57,10 +65,18 @@ func (s *UserService) Register(req *model.RegisterRequest) (*model.User, error) 
 
 	//传入数据库
 	if err := s.UserRepo.AddUser(user); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return user, nil
+	user, _ = s.UserRepo.SelectByUsername(user.Username)
+
+	//使用邀请码
+	err = s.UserRepo.UseInvitationCode(invitationCode.Code, user.UserID)
+	if err != nil {
+		return nil, nil, errors.New("使用邀请码时出现错误")
+	}
+
+	return user, &invitationCode, nil
 }
 
 func (s *UserService) Login(loginKey, password string) (string, *model.User, error, string) {
@@ -207,4 +223,65 @@ func (s *UserService) UpdateInfo(UserID int, req model.UpdateRequest) (model.Use
 	}
 
 	return user, nil
+}
+
+func (s *UserService) GenerateInvitationCode(userID int) (model.InvitationCode, error) {
+	user, err := s.UserRepo.SelectByUserID(userID)
+	if err != nil {
+		return model.InvitationCode{}, errors.New("user not found")
+	}
+	//判定是否超出非admin生成数量
+	if user.Role != "admin" {
+		//VIP可生成三个
+		if user.IsVIP == true {
+			if user.GeneratedInvitationCodeNum >= 3 {
+				return model.InvitationCode{}, errors.New("非管理员的VIP用户邀请码生成数量不能超过3个")
+			}
+		}
+		//非VIP只能生成一个
+		if user.IsVIP == false {
+			if user.GeneratedInvitationCodeNum >= 1 {
+				return model.InvitationCode{}, errors.New("非管理员的普通用户邀请码生成数量不能超过3个")
+			}
+		}
+	}
+
+	//生成邀请码
+	charset := "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+
+	inviteCode := make([]byte, 10)
+	for i := 0; i < 10; i++ {
+		n, err := rand.Int(rand.Reader, big.NewInt(62))
+		if err != nil {
+			return model.InvitationCode{}, errors.New("rand error")
+		}
+		inviteCode[i] = charset[n.Int64()]
+	}
+
+	var invitationCode = model.InvitationCode{
+		Code:          string(inviteCode),
+		CreatorUserID: userID,
+	}
+
+	//数据层
+	//保存邀请码
+	err = s.UserRepo.CreateInvitationCode(invitationCode)
+	if err != nil {
+		return model.InvitationCode{}, errors.New("create invitation code failed")
+	}
+	//更新用户邀请码数量
+	err = s.UserRepo.AddInvitationCodeNum(userID)
+	if err != nil {
+		return model.InvitationCode{}, errors.New("add invitation code failed")
+	}
+
+	return invitationCode, nil
+}
+
+func (s *UserService) InvitationCodeList(userID int) ([]model.InvitationCode, int64, error) {
+	invitationCodes, total, err := s.UserRepo.GetInvitationCodeList(userID)
+	if err != nil {
+		return nil, -1, errors.New("get invitation code list failed")
+	}
+	return invitationCodes, total, nil
 }

@@ -134,57 +134,169 @@ func (repo *mysqlFileRepo) Update(ctx context.Context, file *model.File) error {
 }
 
 func (repo *mysqlFileRepo) Delete(ctx context.Context, id uint) error {
-	//写入数据库
-	//获取file信息
-	var file model.File
-	repo.db.WithContext(ctx).First(&file, id)
-	//删除
-	err := repo.db.WithContext(ctx).Delete(&model.File{}, id).Error
-	if err != nil {
-		return errors.New("failed to delete file")
-	}
-
-	//写后删除
-	if repo.cache != nil {
-		// fileId - file
-		fileCacheKey := fmt.Sprintf("fileID:%d", file.ID)
-		err := repo.cache.Delete(fileCacheKey)
+	return repo.db.Transaction(func(tx *gorm.DB) error {
+		//写入数据库
+		//获取file信息
+		var file model.File
+		repo.db.WithContext(ctx).First(&file, id)
+		//删除
+		err := repo.db.WithContext(ctx).Delete(&model.File{}, id).Error
 		if err != nil {
-			return errors.New("set cache failed")
+			return errors.New("failed to delete file")
 		}
 
-		// fileHash - file
-		fileHashCacheKey := fmt.Sprintf("fileHash:%s", file.Hash)
-		err = repo.cache.Delete(fileHashCacheKey)
-		if err != nil {
-			return errors.New("set cache failed")
-		}
-
-		// userID:parentID:total - parentTotal
-		parentTotalCacheKey := fmt.Sprintf("userID:%d:parentID:%d:total", file.UserID, file.ParentID)
-		if exists := repo.cache.Exists(parentTotalCacheKey); exists { //若存在k-v
-			err = repo.cache.Delete(parentTotalCacheKey)
+		//写后删除
+		if repo.cache != nil {
+			// fileId - file
+			fileCacheKey := fmt.Sprintf("fileID:%d", file.ID)
+			err := repo.cache.Delete(fileCacheKey)
 			if err != nil {
 				return errors.New("set cache failed")
 			}
-		}
 
-		// userID:parentID:id - file
-		// 不需要：查询时按照total一次性写入
-
-		// userID:total - userTotal
-		userTotalCacheKey := fmt.Sprintf("userID:%d:total", file.UserID)
-		if exists := repo.cache.Exists(userTotalCacheKey); exists { //若存在
-			err = repo.cache.Delete(userTotalCacheKey)
+			// fileHash - file
+			fileHashCacheKey := fmt.Sprintf("fileHash:%s", file.Hash)
+			err = repo.cache.Delete(fileHashCacheKey)
 			if err != nil {
 				return errors.New("set cache failed")
 			}
-		}
 
-		// userID:id - file
-		// 不需要：查询时按照total一次性写入
-	}
-	return nil
+			// userID:parentID:total - parentTotal
+			parentTotalCacheKey := fmt.Sprintf("userID:%d:parentID:%d:total", file.UserID, file.ParentID)
+			if exists := repo.cache.Exists(parentTotalCacheKey); exists { //若存在k-v
+				err = repo.cache.Delete(parentTotalCacheKey)
+				if err != nil {
+					return errors.New("set cache failed")
+				}
+			}
+
+			// userID:parentID:id - file
+			// 不需要：查询时按照total一次性写入
+
+			// userID:total - userTotal
+			userTotalCacheKey := fmt.Sprintf("userID:%d:total", file.UserID)
+			if exists := repo.cache.Exists(userTotalCacheKey); exists { //若存在
+				err = repo.cache.Delete(userTotalCacheKey)
+				if err != nil {
+					return errors.New("set cache failed")
+				}
+			}
+
+			// userID:id - file
+			// 不需要：查询时按照total一次性写入
+		}
+		return nil
+	})
+}
+
+func (repo *mysqlFileRepo) Star(ctx context.Context, fileID int64) error {
+	return repo.db.Transaction(func(tx *gorm.DB) error {
+		//更新数据库
+		err := repo.db.WithContext(ctx).Where("id = ?", fileID).Update("is_starred", true).Error
+		if err != nil {
+			return errors.New("failed to star file")
+		}
+		var file model.File
+		repo.db.WithContext(ctx).First(&file, fileID)
+
+		//邂逅删除缓存
+		//写后删除
+		if repo.cache != nil {
+			// fileId - file
+			fileCacheKey := fmt.Sprintf("fileID:%d", file.ID)
+			err := repo.cache.Delete(fileCacheKey)
+			if err != nil {
+				return errors.New("set cache failed")
+			}
+
+			// fileHash - file
+			fileHashCacheKey := fmt.Sprintf("fileHash:%s", file.Hash)
+			err = repo.cache.Delete(fileHashCacheKey)
+			if err != nil {
+				return errors.New("set cache failed")
+			}
+
+			// userID:parentID:total - parentTotal
+			parentTotalCacheKey := fmt.Sprintf("userID:%d:parentID:%d:total", file.UserID, file.ParentID)
+			if exists := repo.cache.Exists(parentTotalCacheKey); exists { //若存在k-v
+				err = repo.cache.Delete(parentTotalCacheKey)
+				if err != nil {
+					return errors.New("set cache failed")
+				}
+			}
+
+			// userID:parentID:id - file
+			// 不需要：查询时按照total一次性写入
+
+			// userID:total - userTotal
+			userTotalCacheKey := fmt.Sprintf("userID:%d:total", file.UserID)
+			if exists := repo.cache.Exists(userTotalCacheKey); exists { //若存在
+				err = repo.cache.Delete(userTotalCacheKey)
+				if err != nil {
+					return errors.New("set cache failed")
+				}
+			}
+
+			// userID:id - file
+			// 不需要：查询时按照total一次性写入
+		}
+		return nil
+	})
+}
+
+func (repo *mysqlFileRepo) Unstar(ctx context.Context, fileID int64) error {
+	return repo.db.Transaction(func(tx *gorm.DB) error {
+		//更新数据库
+		err := repo.db.WithContext(ctx).Where("id = ?", fileID).Update("is_starred", false).Error
+		if err != nil {
+			return errors.New("failed to star file")
+		}
+		var file model.File
+		repo.db.WithContext(ctx).First(&file, fileID)
+
+		//邂逅删除缓存
+		//写后删除
+		if repo.cache != nil {
+			// fileId - file
+			fileCacheKey := fmt.Sprintf("fileID:%d", file.ID)
+			err := repo.cache.Delete(fileCacheKey)
+			if err != nil {
+				return errors.New("set cache failed")
+			}
+
+			// fileHash - file
+			fileHashCacheKey := fmt.Sprintf("fileHash:%s", file.Hash)
+			err = repo.cache.Delete(fileHashCacheKey)
+			if err != nil {
+				return errors.New("set cache failed")
+			}
+
+			// userID:parentID:total - parentTotal
+			parentTotalCacheKey := fmt.Sprintf("userID:%d:parentID:%d:total", file.UserID, file.ParentID)
+			if exists := repo.cache.Exists(parentTotalCacheKey); exists { //若存在k-v
+				err = repo.cache.Delete(parentTotalCacheKey)
+				if err != nil {
+					return errors.New("set cache failed")
+				}
+			}
+
+			// userID:parentID:id - file
+			// 不需要：查询时按照total一次性写入
+
+			// userID:total - userTotal
+			userTotalCacheKey := fmt.Sprintf("userID:%d:total", file.UserID)
+			if exists := repo.cache.Exists(userTotalCacheKey); exists { //若存在
+				err = repo.cache.Delete(userTotalCacheKey)
+				if err != nil {
+					return errors.New("set cache failed")
+				}
+			}
+
+			// userID:id - file
+			// 不需要：查询时按照total一次性写入
+		}
+		return nil
+	})
 }
 
 func (repo *mysqlFileRepo) FindByID(ctx context.Context, id uint) (*model.File, error) {

@@ -2,10 +2,11 @@ package model
 
 // RegisterRequest "/user/register"
 type RegisterRequest struct {
-	Username string `json:"username" binding:"required"`
-	Password string `json:"password" binding:"required"`
-	Email    string `json:"email" binding:"required"`
-	Role     string `json:"role" binding:"required"`
+	Username   string `json:"username" binding:"required"`
+	Password   string `json:"password" binding:"required"`
+	Email      string `json:"email" binding:"required"`
+	Role       string `json:"role" binding:"required"`
+	InviteCode string `json:"invite_code" binding:"required"`
 }
 
 // LoginRequest "/user/login"

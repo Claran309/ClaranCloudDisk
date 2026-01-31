@@ -14,6 +14,7 @@ type UserRepository interface {
 	Exists(username, email string) bool
 	GetStorage(userID int) (int64, error)
 	GetVIP(userID int) (bool, error)
+	GetInvitationCodeList(userID int) ([]model.InvitationCode, int64, error)
 
 	// 更新
 	UpdateUsername(userID int, username string) error
@@ -21,4 +22,10 @@ type UserRepository interface {
 	UpdateEmail(userID int, email string) error
 	UpdateRole(userID int, role string) error
 	UpdateStorage(userID int, storage int64) error
+	AddInvitationCodeNum(userID int) error
+
+	// 邀请码相关
+	ValidateInvitationCode(invitationCode string) (model.InvitationCode, error)
+	CreateInvitationCode(invitationCode model.InvitationCode) error
+	UseInvitationCode(invitationCode string, userID int) error
 }

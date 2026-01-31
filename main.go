@@ -56,12 +56,14 @@ func main() {
 
 	//=======================================用户管理路由=============================================
 	user := r.Group("/user")
-	user.POST("/register", userHandler.Register)                                  // 注册
-	user.POST("/login", userHandler.Login)                                        // 登录
-	user.POST("/refresh", userHandler.Refresh)                                    // 刷新token
-	user.GET("/info", jwtMiddleware.JWTAuthentication(), userHandler.InfoHandler) // 获取个人信息
-	user.POST("/logout", jwtMiddleware.JWTAuthentication(), userHandler.Logout)   // 登出
-	user.PUT("/update", jwtMiddleware.JWTAuthentication(), userHandler.Update)    // 更新个人信息
+	user.POST("/register", userHandler.Register)                                                                 // 注册
+	user.POST("/login", userHandler.Login)                                                                       // 登录
+	user.POST("/refresh", userHandler.Refresh)                                                                   // 刷新token
+	user.GET("/info", jwtMiddleware.JWTAuthentication(), userHandler.InfoHandler)                                // 获取个人信息
+	user.POST("/logout", jwtMiddleware.JWTAuthentication(), userHandler.Logout)                                  // 登出
+	user.PUT("/update", jwtMiddleware.JWTAuthentication(), userHandler.Update)                                   // 更新个人信息
+	user.GET("/generate_invitation_code", jwtMiddleware.JWTAuthentication(), userHandler.GenerateInvitationCode) // 生成邀请码
+	user.GET("/invitation_code_list", jwtMiddleware.JWTAuthentication(), userHandler.InvitationCodeList)         // 生成的邀请码列表
 
 	//=======================================文件管理路由=============================================
 	file := r.Group("/file")
@@ -75,6 +77,9 @@ func main() {
 	file.GET("/:id/preview", fileHandler.Preview)         // 预览文件
 	file.GET("/:id/content", fileHandler.GetContent)      // 获取文件内容
 	file.GET("/:id/preview-info", fileHandler.GetPreInfo) // 获取预览信息
+	file.GET("/star_list", fileHandler.GetStarList)       // 获取收藏列表
+	file.POST("/:id/star", fileHandler.Star)              // 收藏
+	file.POST("/:id/Unstar", fileHandler.Unstar)          // 取消收藏
 	//=======================================分享管理路由=============================================
 	share := r.Group("/share")
 	share.Use(jwtMiddleware.JWTAuthentication())

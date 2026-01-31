@@ -162,6 +162,67 @@ func (s *FileService) GetFileList(ctx context.Context, userID int) ([]*model.Fil
 	return files, int(total), err
 }
 
+func (s *FileService) GetStarList(ctx context.Context, userID int) ([]*model.File, int, error) {
+	allFiles, total, err := s.FileRepo.FindByUserID(ctx, uint(userID))
+	var files []*model.File
+	for i, file := range allFiles {
+		if allFiles[i].IsStarred == true {
+			files = append(files, file)
+		}
+	}
+	return files, int(total), err
+}
+
+func (s *FileService) Star(ctx context.Context, userID int, fileID int64) (*model.File, error) {
+	//获取信息
+	file, err := s.FileRepo.FindByID(ctx, uint(fileID))
+	if err != nil {
+		return nil, fmt.Errorf("文件不存在: %v", err)
+	}
+
+	if file.IsStarred == true {
+		return nil, fmt.Errorf("已收藏过该文件")
+	}
+
+	//鉴权
+	if file.UserID != uint(userID) {
+		return nil, fmt.Errorf("无权访问此文件")
+	}
+
+	//数据层
+	err = s.FileRepo.Star(ctx, fileID)
+	if err != nil {
+		return nil, fmt.Errorf("收藏文件失败: %v", err)
+	}
+
+	return file, nil
+}
+
+func (s *FileService) Unstar(ctx context.Context, userID int, fileID int64) (*model.File, error) {
+	//获取信息
+	file, err := s.FileRepo.FindByID(ctx, uint(fileID))
+	if err != nil {
+		return nil, fmt.Errorf("文件不存在: %v", err)
+	}
+
+	if file.IsStarred == false {
+		return nil, fmt.Errorf("未收藏过该文件")
+	}
+
+	//鉴权
+	if file.UserID != uint(userID) {
+		return nil, fmt.Errorf("无权访问此文件")
+	}
+
+	//数据层
+	err = s.FileRepo.Unstar(ctx, fileID)
+	if err != nil {
+		return nil, fmt.Errorf("收藏文件失败: %v", err)
+	}
+
+	return file, nil
+}
+
 func (s *FileService) GetFileInfo(ctx context.Context, userID int, fileID int64) (*model.File, error) {
 	//获取信息
 	file, err := s.FileRepo.FindByID(ctx, uint(fileID))

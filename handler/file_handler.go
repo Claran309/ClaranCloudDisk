@@ -210,6 +210,61 @@ func (h *FileHandler) Delete(c *gin.Context) {
 	util.Success(c, gin.H{}, "删除成功")
 }
 
+func (h *FileHandler) GetStarList(c *gin.Context) {
+	//捕获数据
+	userID := c.GetInt("user_id")
+
+	//调用服务层
+	ctx := c.Request.Context()
+	files, total, err := h.fileService.GetStarList(ctx, userID)
+	if err != nil {
+		util.Error(c, 500, "获取文件列表失败: "+err.Error())
+		return
+	}
+
+	//范湖响应
+	util.Success(c, gin.H{
+		"files": files,
+		"total": total,
+	}, "获取成功")
+}
+
+func (h *FileHandler) Star(c *gin.Context) {
+	//捕获数据
+	userID := c.GetInt("user_id")
+	fileID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+
+	//服务层
+	file, err := h.fileService.Star(c, userID, fileID)
+	if err != nil {
+		util.Error(c, 500, "收藏文件失败: "+err.Error())
+		return
+	}
+
+	// 响应
+	util.Success(c, gin.H{
+		"file": file,
+	}, "收藏成功")
+}
+
+func (h *FileHandler) Unstar(c *gin.Context) {
+	//捕获数据
+	userID := c.GetInt("user_id")
+	fileID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+
+	//服务层
+	file, err := h.fileService.Unstar(c, userID, fileID)
+	if err != nil {
+		util.Error(c, 500, "收藏文件失败: "+err.Error())
+		return
+	}
+
+	// 响应
+	util.Success(c, gin.H{
+		"file": file,
+	}, "收藏成功")
+}
+
 // Rename /:id/rename
 func (h *FileHandler) Rename(c *gin.Context) {
 	//捕获数据

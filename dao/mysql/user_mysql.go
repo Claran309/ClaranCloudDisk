@@ -546,3 +546,153 @@ func (repo *mysqlUserRepo) UpdateStorage(userID int, storage int64) error {
 		return nil
 	})
 }
+
+func (repo *mysqlUserRepo) AddInvitationCodeNum(userID int) error {
+	return repo.db.Transaction(func(tx *gorm.DB) error {
+		var user model.User
+		err := repo.db.Model(&user).Where("user_id = ?", userID).Update("generated_invitation_code_num", gorm.Expr("generated_invitation_code_num + ?", 1)).Error
+		if err != nil {
+			return errors.New("update user failed")
+		}
+
+		//更新后数据
+		err = repo.db.Where("user_id = ?", userID).First(&user).Error
+		if err != nil {
+			return errors.New("update user failed")
+		}
+
+		//写后删除缓存
+		err = repo.cache.Delete(fmt.Sprintf("user:id:%d", user.UserID))
+		if err != nil {
+			return errors.New("delete user failed")
+		}
+		err = repo.cache.Delete(fmt.Sprintf("user:username:%s", user.Username))
+		if err != nil {
+			return errors.New("delete user failed")
+		}
+		err = repo.cache.Delete(fmt.Sprintf("user:email:%s", user.Email))
+		if err != nil {
+			return errors.New("delete user failed")
+		}
+
+		return nil
+	})
+}
+
+func (repo *mysqlUserRepo) ValidateInvitationCode(invitationCode string) (model.InvitationCode, error) {
+	// 缓存
+	if repo.cache != nil {
+		cacheKey := fmt.Sprintf("invitationCode:%s", invitationCode)
+		var InvitationCode model.InvitationCode
+		if err := repo.cache.Get(cacheKey, &InvitationCode); err == nil {
+			if InvitationCode.IsUsed == false {
+				return InvitationCode, nil
+			}
+		}
+	}
+
+	// 数据库
+	var InvitationCode model.InvitationCode
+	err := repo.db.Where("invitation_code = ?", invitationCode).Where("is_used = ?", false).First(&InvitationCode).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// 防止缓存穿透
+			if repo.cache != nil {
+				cacheKey := fmt.Sprintf("invitationCode:%s", invitationCode)
+				emptyCode := struct{}{}
+				err := repo.cache.Set(cacheKey, emptyCode, 1*time.Minute)
+				if err != nil {
+					return model.InvitationCode{}, errors.New("set cache failed")
+				}
+			}
+			return model.InvitationCode{}, errors.New("email select failed")
+		}
+		return model.InvitationCode{}, errors.New("email select failed")
+	}
+
+	//写入缓存
+	if repo.cache != nil {
+		//分布式锁
+		lockKey := fmt.Sprintf("lock:invitationCode:%s", invitationCode)
+		if suc, _ := repo.cache.Lock(lockKey, 10*time.Second); suc {
+			defer repo.cache.Unlock(lockKey)
+
+			CacheKey := fmt.Sprintf("invitationCode:%s", invitationCode)
+			err := repo.cache.Set(CacheKey, &InvitationCode, repo.cache.RandExp(5*time.Minute))
+			if err != nil {
+				return model.InvitationCode{}, errors.New("set cache failed")
+			}
+		}
+	}
+
+	return InvitationCode, nil
+}
+
+func (repo *mysqlUserRepo) CreateInvitationCode(invitationCode model.InvitationCode) error {
+	return repo.db.Transaction(func(tx *gorm.DB) error {
+		//写入数据库
+		var invitationCode = model.InvitationCode{
+			UserID: invitationCode.UserID,
+			Code:   invitationCode.Code,
+			IsUsed: false,
+		}
+		err := repo.db.Create(&invitationCode).Error
+		if err != nil {
+			return errors.New("create invitationCode failed")
+		}
+
+		//邂逅删除
+		CacheKey := fmt.Sprintf("invitationCode:%s", invitationCode)
+		err = repo.cache.Delete(CacheKey)
+		if err != nil {
+			return errors.New("set cache failed")
+		}
+
+		return nil
+	})
+}
+
+func (repo *mysqlUserRepo) UseInvitationCode(invitationCode string, userID int) error {
+	return repo.db.Transaction(func(tx *gorm.DB) error {
+		//写入数据库
+		invitationCode, _ := repo.ValidateInvitationCode(invitationCode)
+		invitationCode.IsUsed = true
+		invitationCode.UserID = userID
+		err := repo.db.Save(&invitationCode).Error
+		if err != nil {
+			return errors.New("use invitationCode failed")
+		}
+
+		//邂逅删除
+		CacheKey := fmt.Sprintf("invitationCode:%s", invitationCode)
+		err = repo.cache.Delete(CacheKey)
+		if err != nil {
+			return errors.New("set cache failed")
+		}
+
+		return nil
+	})
+}
+
+func (repo *mysqlUserRepo) GetInvitationCodeList(userID int) ([]model.InvitationCode, int64, error) {
+	//数据库
+	var invitationCodes []model.InvitationCode
+	var total int64
+
+	//计算总数
+	if err := repo.db.Model(&model.InvitationCode{}).
+		Where("creator_user_id = ?", userID).
+		Count(&total).Error; err != nil {
+		return nil, -1, err
+	}
+
+	//查找文件
+	err := repo.db.Where("user_id = ?", userID).
+		Order("created_at DESC").
+		Find(&invitationCodes).Error
+	if err != nil {
+		return nil, -1, err
+	}
+
+	return invitationCodes, total, nil
+}

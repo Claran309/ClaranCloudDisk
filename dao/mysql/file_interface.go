@@ -9,6 +9,8 @@ type FileRepository interface {
 	Create(ctx context.Context, file *model.File) error
 	Update(ctx context.Context, file *model.File) error
 	Delete(ctx context.Context, id uint) error
+	Star(ctx context.Context, fileID int64) error
+	Unstar(ctx context.Context, fileID int64) error
 	FindByID(ctx context.Context, id uint) (*model.File, error)
 	FindByHash(ctx context.Context, hash string) (*model.File, error)
 	FindByUserID(ctx context.Context, userID uint) ([]*model.File, int64, error)

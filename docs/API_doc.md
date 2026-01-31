@@ -8,7 +8,7 @@
 
 ## 基础信息
 
-- **Base URL**: `http://your-domain.com/api`
+- **Base URL**: `未部署服务器`
 - **认证方式**: JWT Bearer Token
 - **数据格式**: 默认使用 JSON 格式传输数据，文件上传除外
 
@@ -57,12 +57,13 @@
 
 **请求参数**:
 
-| 参数名 | 类型 | 必填 | 说明 | 示例 |
-|--------|------|------|------|------|
-| username | string | 是 | 用户名 | "john_doe" |
-| password | string | 是 | 密码 | "password123" |
-| email | string | 是 | 邮箱地址 | "john@example.com" |
-| role | string | 否 | 用户角色，默认"user" | "user" 或 "admin" |
+| 参数名             | 类型 | 必填 | 说明             | 示例                 |
+|-----------------|------|----|----------------|--------------------|
+| username        | string | 是  | 用户名            | "john_doe"         |
+| password        | string | 是  | 密码             | "password123"      |
+| email           | string | 是  | 邮箱地址           | "john@example.com" |
+| role            | string | 是  | 用户角色，默认"user"  | "user" 或 "admin"   |
+| invite_code | string | 是  | 注册邀请码 | "aish29dn52"       |
 
 **请求体示例**:
 ```json
@@ -70,7 +71,8 @@
   "username": "john_doe",
   "password": "password123",
   "email": "john@example.com",
-  "role": "user"
+  "role": "user",
+  "invite_code":"aish29dn52",
 }
 ```
 
@@ -82,7 +84,9 @@
   "data": {
     "username": "john_doe",
     "user_id": 1,
-    "email": "john@example.com"
+    "email": "john@example.com",
+    "inviter": 2,
+    "invitation_code": "aish29dn52",
   }
 }
 ```
@@ -293,6 +297,107 @@
 - 400: 参数验证失败
 - 401: 令牌无效
 - 500: 更新失败
+
+### 7. 生成邀请码
+生成一个新的邀请码。
+
+- **URL**: `/user/generate_invitation_code`
+- **方法**: `GET`
+- **认证**: 需要 Bearer Token
+- **Content-Type**: 无
+
+**请求头**:
+
+| 请求头 | 值 | 说明 |
+|--------|----|------|
+| Authorization | Bearer {token} | 访问令牌 |
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "generate invitation code successfully",
+  "data": {
+    "invitation_code": "ABC123DEF456"
+  }
+}
+```
+
+**错误码**:
+- 401: 令牌无效
+- 500: 生成邀请码失败
+
+### 8. 获取邀请码列表
+获取当前用户生成的所有邀请码列表。
+
+- **URL**: `/user/invitation_code_list`
+- **方法**: `GET`
+- **认证**: 需要 Bearer Token
+- **Content-Type**: 无
+
+**请求头**:
+
+| 请求头 | 值 | 说明 |
+|--------|----|------|
+| Authorization | Bearer {token} | 访问令牌 |
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "获取成功",
+  "data": {
+    "total": 3,
+    "invitation_code_list": [
+      {
+        "id": 1,
+        "code": "ABC123DEF456",
+        "user_id": 1,
+        "used": false,
+        "used_by": null,
+        "created_at": "2023-10-01T12:00:00Z",
+        "expires_at": "2023-10-08T12:00:00Z"
+      },
+      {
+        "id": 2,
+        "code": "GHI789JKL012",
+        "user_id": 1,
+        "used": true,
+        "used_by": 2,
+        "created_at": "2023-10-01T10:00:00Z",
+        "expires_at": "2023-10-08T10:00:00Z"
+      },
+      {
+        "id": 3,
+        "code": "MNO345PQR678",
+        "user_id": 1,
+        "used": false,
+        "used_by": null,
+        "created_at": "2023-10-02T14:00:00Z",
+        "expires_at": "2023-10-09T14:00:00Z"
+      }
+    ]
+  }
+}
+```
+
+**响应字段说明**:
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| total | integer | 邀请码总数 |
+| invitation_code_list[].id | integer | 邀请码ID |
+| invitation_code_list[].code | string | 邀请码字符串 |
+| invitation_code_list[].user_id | integer | 创建者用户ID |
+| invitation_code_list[].used | boolean | 是否已使用 |
+| invitation_code_list[].used_by | integer/null | 使用者的用户ID，未使用为null |
+| invitation_code_list[].created_at | string | 创建时间 |
+| invitation_code_list[].expires_at | string | 过期时间 |
+
+**错误码**:
+- 401: 令牌无效
+- 500: 获取邀请码列表失败
+
 
 ---
 
@@ -747,7 +852,174 @@ Content-Range: bytes 0-1023/102400  # 仅在使用Range请求时包含
 - 404: 文件不存在
 - 500: 获取文件类型失败或服务器内部错误
 
-### 10. 支持的预览文件类型
+### 10. 获取收藏列表
+获取当前用户收藏的所有文件列表。
+
+- **URL**: `/file/star_list`
+- **方法**: `GET`
+- **认证**: 需要 Bearer Token
+- **Content-Type**: 无
+
+**请求头**:
+
+| 请求头 | 值 | 说明 |
+|--------|----|------|
+| Authorization | Bearer {token} | 访问令牌 |
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "获取成功",
+  "data": {
+    "files": [
+      {
+        "id": 1,
+        "user_id": 1,
+        "name": "example.txt",
+        "path": "/uploads/example.txt",
+        "size": 1024,
+        "mime_type": "text/plain",
+        "is_starred": true,
+        "created_at": "2023-10-01T12:00:00Z",
+        "updated_at": "2023-10-01T12:00:00Z"
+      },
+      {
+        "id": 2,
+        "user_id": 1,
+        "name": "image.jpg",
+        "path": "/uploads/image.jpg",
+        "size": 204800,
+        "mime_type": "image/jpeg",
+        "is_starred": true,
+        "created_at": "2023-10-01T12:30:00Z",
+        "updated_at": "2023-10-01T12:30:00Z"
+      }
+    ],
+    "total": 2
+  }
+}
+```
+
+**响应字段说明**:
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| files[].id | integer | 文件ID |
+| files[].user_id | integer | 文件所有者ID |
+| files[].name | string | 文件名 |
+| files[].path | string | 文件存储路径 |
+| files[].size | integer | 文件大小（字节） |
+| files[].mime_type | string | 文件MIME类型 |
+| files[].is_starred | boolean | 是否已收藏 |
+| files[].created_at | string | 文件创建时间 |
+| files[].updated_at | string | 文件更新时间 |
+| total | integer | 收藏文件总数 |
+
+**错误码**:
+- 401: 令牌无效
+- 500: 获取收藏列表失败
+
+### 11. 收藏文件
+收藏指定文件。
+
+- **URL**: `/file/{id}/star`
+- **方法**: `POST`
+- **认证**: 需要 Bearer Token
+- **Content-Type**: 无
+
+**请求头**:
+
+| 请求头 | 值 | 说明 |
+|--------|----|------|
+| Authorization | Bearer {token} | 访问令牌 |
+
+**路径参数**:
+
+| 参数名 | 类型 | 必填 | 说明 | 示例 |
+|--------|------|------|------|------|
+| id | integer | 是 | 文件ID | 1 |
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "收藏成功",
+  "data": {
+    "file": {
+      "id": 1,
+      "user_id": 1,
+      "name": "example.txt",
+      "path": "/uploads/example.txt",
+      "size": 1024,
+      "mime_type": "text/plain",
+      "is_starred": true,
+      "created_at": "2023-10-01T12:00:00Z",
+      "updated_at": "2023-10-01T12:00:00Z"
+    }
+  }
+}
+```
+
+**错误码**:
+- 400: 无效的文件ID
+- 401: 令牌无效
+- 403: 无权限操作该文件
+- 404: 文件不存在
+- 409: 文件已收藏
+- 500: 收藏文件失败
+
+### 12. 取消收藏文件
+取消收藏指定文件。
+
+- **URL**: `/file/{id}/Unstar`
+- **方法**: `POST`
+- **认证**: 需要 Bearer Token
+- **Content-Type**: 无
+
+**注意**: 接口名称中的"Unstar"保持与代码一致，请注意大小写
+
+**请求头**:
+
+| 请求头 | 值 | 说明 |
+|--------|----|------|
+| Authorization | Bearer {token} | 访问令牌 |
+
+**路径参数**:
+
+| 参数名 | 类型 | 必填 | 说明 | 示例 |
+|--------|------|------|------|------|
+| id | integer | 是 | 文件ID | 1 |
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "取消收藏成功",
+  "data": {
+    "file": {
+      "id": 1,
+      "user_id": 1,
+      "name": "example.txt",
+      "path": "/uploads/example.txt",
+      "size": 1024,
+      "mime_type": "text/plain",
+      "is_starred": false,
+      "created_at": "2023-10-01T12:00:00Z",
+      "updated_at": "2023-10-01T12:00:00Z"
+    }
+  }
+}
+```
+
+**错误码**:
+- 400: 无效的文件ID
+- 401: 令牌无效
+- 403: 无权限操作该文件
+- 404: 文件不存在或未收藏
+- 500: 取消收藏失败
+
+### 另：支持的预览文件类型
 
 | 文件分类 | 扩展名 | 预览方式 | 备注 |
 |----------|--------|----------|------|
