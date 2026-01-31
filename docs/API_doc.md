@@ -352,29 +352,26 @@
       {
         "id": 1,
         "code": "ABC123DEF456",
-        "user_id": 1,
-        "used": false,
-        "used_by": null,
+        "creator_user_id": 1,
+        "is_used": false,
+        "user_id": null,
         "created_at": "2023-10-01T12:00:00Z",
-        "expires_at": "2023-10-08T12:00:00Z"
       },
       {
         "id": 2,
         "code": "GHI789JKL012",
-        "user_id": 1,
-        "used": true,
-        "used_by": 2,
+        "creator_user_id": 1,
+        "is_used": false,
+        "user_id": 2,
         "created_at": "2023-10-01T10:00:00Z",
-        "expires_at": "2023-10-08T10:00:00Z"
       },
       {
         "id": 3,
         "code": "MNO345PQR678",
-        "user_id": 1,
-        "used": false,
-        "used_by": null,
+        "creator_user_id": 1,
+        "is_used": false,
+        "user_id": null,
         "created_at": "2023-10-02T14:00:00Z",
-        "expires_at": "2023-10-09T14:00:00Z"
       }
     ]
   }
@@ -877,23 +874,33 @@ Content-Range: bytes 0-1023/102400  # 仅在使用Range请求时包含
         "id": 1,
         "user_id": 1,
         "name": "example.txt",
+        "filename": "example_12345.txt",
         "path": "/uploads/example.txt",
         "size": 1024,
+        "hash": "a1b2c3d4e5f6",
         "mime_type": "text/plain",
+        "ext": "txt",
         "is_starred": true,
-        "created_at": "2023-10-01T12:00:00Z",
-        "updated_at": "2023-10-01T12:00:00Z"
+        "is_dir": false,
+        "parent_id": null,
+        "is_shared": false,
+        "created_at": "2023-10-01T12:00:00Z"
       },
       {
         "id": 2,
         "user_id": 1,
         "name": "image.jpg",
+        "filename": "image_12345.jpg",
         "path": "/uploads/image.jpg",
         "size": 204800,
+        "hash": "g7h8i9j0k1l2",
         "mime_type": "image/jpeg",
+        "ext": "jpg",
         "is_starred": true,
-        "created_at": "2023-10-01T12:30:00Z",
-        "updated_at": "2023-10-01T12:30:00Z"
+        "is_dir": false,
+        "parent_id": null,
+        "is_shared": false,
+        "created_at": "2023-10-01T12:30:00Z"
       }
     ],
     "total": 2
@@ -950,12 +957,17 @@ Content-Range: bytes 0-1023/102400  # 仅在使用Range请求时包含
       "id": 1,
       "user_id": 1,
       "name": "example.txt",
+      "filename": "example_12345.txt",
       "path": "/uploads/example.txt",
       "size": 1024,
+      "hash": "a1b2c3d4e5f6",
       "mime_type": "text/plain",
+      "ext": "txt",
       "is_starred": true,
-      "created_at": "2023-10-01T12:00:00Z",
-      "updated_at": "2023-10-01T12:00:00Z"
+      "is_dir": false,
+      "parent_id": null,
+      "is_shared": false,
+      "created_at": "2023-10-01T12:00:00Z"
     }
   }
 }
@@ -1001,12 +1013,17 @@ Content-Range: bytes 0-1023/102400  # 仅在使用Range请求时包含
       "id": 1,
       "user_id": 1,
       "name": "example.txt",
+      "filename": "example_12345.txt",
       "path": "/uploads/example.txt",
       "size": 1024,
+      "hash": "a1b2c3d4e5f6",
       "mime_type": "text/plain",
+      "ext": "txt",
       "is_starred": false,
-      "created_at": "2023-10-01T12:00:00Z",
-      "updated_at": "2023-10-01T12:00:00Z"
+      "is_dir": false,
+      "parent_id": null,
+      "is_shared": false,
+      "created_at": "2023-10-01T12:00:00Z"
     }
   }
 }
