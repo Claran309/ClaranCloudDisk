@@ -380,16 +380,15 @@
 
 **响应字段说明**:
 
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| total | integer | 邀请码总数 |
-| invitation_code_list[].id | integer | 邀请码ID |
-| invitation_code_list[].code | string | 邀请码字符串 |
-| invitation_code_list[].user_id | integer | 创建者用户ID |
-| invitation_code_list[].used | boolean | 是否已使用 |
-| invitation_code_list[].used_by | integer/null | 使用者的用户ID，未使用为null |
-| invitation_code_list[].created_at | string | 创建时间 |
-| invitation_code_list[].expires_at | string | 过期时间 |
+| 字段名                                    | 类型 | 说明 |
+|----------------------------------------|------|------|
+| total                                  | integer | 邀请码总数 |
+| invitation_code_list[].id              | integer | 邀请码ID |
+| invitation_code_list[].code            | string | 邀请码字符串 |
+| invitation_code_list[].creator_user_id | integer | 创建者用户ID |
+| invitation_code_list[].is_used         | boolean | 是否已使用 |
+| invitation_code_list[].user_id         | integer/null | 使用者的用户ID，未使用为null |
+| invitation_code_list[].created_at      | string | 创建时间 |
 
 **错误码**:
 - 401: 令牌无效
@@ -908,19 +907,25 @@ Content-Range: bytes 0-1023/102400  # 仅在使用Range请求时包含
 }
 ```
 
+
 **响应字段说明**:
 
 | 字段名 | 类型 | 说明 |
 |--------|------|------|
 | files[].id | integer | 文件ID |
 | files[].user_id | integer | 文件所有者ID |
-| files[].name | string | 文件名 |
+| files[].name | string | 原始文件名 |
+| files[].filename | string | 存储文件名 |
 | files[].path | string | 文件存储路径 |
 | files[].size | integer | 文件大小（字节） |
+| files[].hash | string | 文件哈希值（用于秒传） |
 | files[].mime_type | string | 文件MIME类型 |
-| files[].is_starred | boolean | 是否已收藏 |
+| files[].ext | string | 文件扩展名 |
+| files[].is_starred | boolean | 是否被收藏 |
+| files[].is_dir | boolean | 是否是文件夹 |
+| files[].parent_id | integer/null | 父文件夹ID，顶层文件为null |
+| files[].is_shared | boolean | 是否已分享 |
 | files[].created_at | string | 文件创建时间 |
-| files[].updated_at | string | 文件更新时间 |
 | total | integer | 收藏文件总数 |
 
 **错误码**:
