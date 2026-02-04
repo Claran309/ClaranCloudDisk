@@ -42,11 +42,11 @@ func main() {
 	// JWT工具
 	jwtUtil := jwt_util.NewJWTUtil(cfg)
 	// 业务逻辑层依赖
-	userService := services.NewUserService(userRepo, tokenRepo, jwtUtil)
+	userService := services.NewUserService(userRepo, tokenRepo, jwtUtil, cfg.AvatarDIR)
 	fileService := services.NewUFileService(fileRepo, userRepo, cfg.CloudFileDir, cfg.MaxFileSize, cfg.NormalUserMaxStorage, cfg.LimitedSpeed)
 	shareService := services.NewShareService(shareRepo, fileRepo, userRepo, cfg.CloudFileDir)
 	// 处理器层依赖
-	userHandler := handlers.NewUserHandler(userService)
+	userHandler := handlers.NewUserHandler(userService, cfg.DefaultAvatarPath)
 	fileHandler := handlers.NewFileHandler(fileService)
 	shareHandler := handlers.NewShareHandler(shareService)
 	//创建中间件
@@ -64,6 +64,9 @@ func main() {
 	user.PUT("/update", jwtMiddleware.JWTAuthentication(), userHandler.Update)                                   // 更新个人信息
 	user.GET("/generate_invitation_code", jwtMiddleware.JWTAuthentication(), userHandler.GenerateInvitationCode) // 生成邀请码
 	user.GET("/invitation_code_list", jwtMiddleware.JWTAuthentication(), userHandler.InvitationCodeList)         // 生成的邀请码列表
+	user.POST("/upload_avatar", jwtMiddleware.JWTAuthentication(), userHandler.UploadAvatar)                     // 上传头像
+	user.GET("/get_avatar", jwtMiddleware.JWTAuthentication(), userHandler.GetAvatar)                            // 获取当前用户头像
+	user.GET("/:id/get_avatar", userHandler.GetUniqueAvatar)                                                     // 获取特定用户头像
 
 	//=======================================文件管理路由=============================================
 	file := r.Group("/file")
@@ -81,13 +84,13 @@ func main() {
 	file.POST("/:id/star", fileHandler.Star)              // 收藏
 	file.POST("/:id/Unstar", fileHandler.Unstar)          // 取消收藏
 	//=======================================分享管理路由=============================================
+	//下载或转存全部文件 = 逐个下载share下的全部文件
 	share := r.Group("/share")
 	share.Use(jwtMiddleware.JWTAuthentication())
-	share.POST("/create", shareHandler.CreateShare)       // 新建分享
-	share.GET("/mine", shareHandler.CheckMine)            // 查看自己的分享列表
-	share.DELETE("/:unique_id", shareHandler.DeleteShare) // 删除分享
-	share.GET("/:unique_id", shareHandler.CheckMine)      // 查看分享
-	//下载或转存全部文件 = 逐个下载share下的全部文件
+	share.POST("/create", shareHandler.CreateShare)                           // 新建分享
+	share.GET("/mine", shareHandler.CheckMine)                                // 查看自己的分享列表
+	share.DELETE("/:unique_id", shareHandler.DeleteShare)                     // 删除分享
+	share.GET("/:unique_id", shareHandler.CheckMine)                          // 查看分享
 	share.GET("/:unique_id/:file_id/download", shareHandler.DownloadSpecFile) // 下载指定文件
 	share.POST("/:unique_id/:file_id/save", shareHandler.SaveSpecFile)        // 转存指定文件
 

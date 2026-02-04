@@ -10,4 +10,5 @@ type User struct {
 	IsVIP                      bool   `json:"is_vip" gorm:"column:is_vip;type:tinyint(1)"`
 	Storage                    int64  `json:"storage" gorm:"column:storage"` // 以字节为单位
 	GeneratedInvitationCodeNum int64  `json:"generated_invitation_code_num" gorm:"column:generated_invitation_code_num" // 已生成的邀请码数量`
+	Avatar                     string `json:"avatar" gorm:"column:avatar"` // 头像路径
 }

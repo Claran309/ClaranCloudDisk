@@ -7,7 +7,13 @@ import (
 	"ClaranCloudDisk/util/jwt_util"
 	"crypto/rand"
 	"errors"
+	"fmt"
+	"io"
 	"math/big"
+	"mime"
+	"mime/multipart"
+	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -15,13 +21,15 @@ type UserService struct {
 	UserRepo  mysql.UserRepository
 	TokenRepo mysql.TokenRepository
 	jwtUtil   jwt_util.Util
+	AvatarDIR string
 }
 
-func NewUserService(userRepo mysql.UserRepository, tokenRepo mysql.TokenRepository, jwtUtil jwt_util.Util) *UserService {
+func NewUserService(userRepo mysql.UserRepository, tokenRepo mysql.TokenRepository, jwtUtil jwt_util.Util, avatarDIR string) *UserService {
 	return &UserService{
 		UserRepo:  userRepo,
 		TokenRepo: tokenRepo,
 		jwtUtil:   jwtUtil,
+		AvatarDIR: avatarDIR,
 	}
 }
 
@@ -284,4 +292,100 @@ func (s *UserService) InvitationCodeList(userID int) ([]model.InvitationCode, in
 		return nil, -1, errors.New("get invitation code list failed")
 	}
 	return invitationCodes, total, nil
+}
+
+func (s *UserService) UploadAvatar(file *multipart.FileHeader, userID int, userName string) (string, string, string, error) {
+	// 验证文件类型
+	contentType := file.Header.Get("Content-Type")
+	allowedTypes := []string{
+		"image/jpeg",
+		"image/png",
+		"image/gif",
+		"image/webp",
+		"image/jpg",
+	}
+
+	validType := false
+	for _, allowedType := range allowedTypes {
+		if contentType == allowedType {
+			validType = true
+			break
+		}
+	}
+
+	if !validType {
+		return "", "", "", errors.New("不支持的文件类型，请上传图片文件 (jpg, png, gif, webp)")
+	}
+
+	// 限制5MB
+	maxSize := int64(5 * 1024 * 1024) // 5MB
+	if file.Size > maxSize {
+		return "", "", "", errors.New("文件大小不能超过5MB")
+	}
+
+	// 打开文件
+	src, err := file.Open()
+	if err != nil {
+		return "", "", "", errors.New("无法打开文件")
+	}
+	defer src.Close()
+
+	// 生成唯一文件名
+	ext := filepath.Ext(file.Filename)
+	if ext == "" {
+		// 如果没有扩展名，根据Content-Type推断
+		exts, _ := mime.ExtensionsByType(contentType)
+		if len(exts) > 0 {
+			ext = exts[0]
+		} else {
+			ext = ".jpg" // 默认
+		}
+	}
+
+	// 使用username+UID生成唯一文件名
+	fileName := fmt.Sprintf("avatar_%d_%s%s", userName, userID, ext)
+
+	//目录
+	userDir := filepath.Join(s.AvatarDIR, fmt.Sprintf("user_%d", userID))
+
+	// 确保目录存在
+	if err := os.MkdirAll(userDir, 0755); err != nil {
+		return "", "", "", errors.New("创建存储目录失败")
+	}
+
+	// 创建目标文件
+	dstPath := filepath.Join(userDir, fileName)
+	dst, err := os.Create(dstPath)
+	if err != nil {
+		return "", "", "", errors.New("创建目标文件失败")
+	}
+	defer dst.Close()
+
+	// 复制文件内容到服务器
+	_, err = io.Copy(dst, src)
+	if err != nil {
+		// 删除不完整的文件
+		os.Remove(dstPath)
+		return "", "", "", errors.New("保存文件失败")
+	}
+
+	// 构建访问URL
+	avatarURL := fmt.Sprintf(s.AvatarDIR, "/user_%d/%s", userID, fileName)
+
+	// 将访问URL保存到数据层
+	err = s.UserRepo.UploadAvatar(userID, avatarURL)
+	if err != nil {
+		return "", "", "", errors.New("upload database failed")
+	}
+
+	return avatarURL, fileName, contentType, nil
+}
+
+func (s *UserService) GetAvatar(userID int) (string, error) {
+	//访问数据层
+	avatarPath, err := s.UserRepo.GetAvatar(userID)
+	if err != nil {
+		return "", errors.New("get avatar failed")
+	}
+	return avatarPath, nil
 }

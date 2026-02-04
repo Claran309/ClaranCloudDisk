@@ -696,3 +696,99 @@ func (repo *mysqlUserRepo) GetInvitationCodeList(userID int) ([]model.Invitation
 
 	return invitationCodes, total, nil
 }
+
+func (repo *mysqlUserRepo) UploadAvatar(userID int, url string) error {
+	//数据库
+	return repo.db.Transaction(func(tx *gorm.DB) error {
+		//数据库
+		err := repo.db.Where("user_id = ?", userID).Update("avatar_url", url).Error
+		if err != nil {
+			return err
+		}
+
+		user, _ := repo.SelectByUserID(userID)
+
+		//邂逅删除
+		//写后删除
+		if repo.cache != nil {
+			userCacheKey := fmt.Sprintf("user:id:%d", user.UserID)
+			err := repo.cache.Delete(userCacheKey)
+			if err != nil {
+				return errors.New("set cache failed")
+			}
+
+			usernameCacheKey := fmt.Sprintf("user:username:%s", user.Username)
+			err = repo.cache.Delete(usernameCacheKey)
+			if err != nil {
+				return errors.New("set cache failed")
+			}
+
+			emailCacheKey := fmt.Sprintf("user:email:%s", user.Email)
+			err = repo.cache.Delete(emailCacheKey)
+			if err != nil {
+				return errors.New("set cache failed")
+			}
+		}
+
+		return nil
+	})
+}
+
+func (repo *mysqlUserRepo) GetAvatar(userID int) (string, error) {
+	//缓存
+	if repo.cache != nil {
+		cacheKey := fmt.Sprintf("user:id:%d", userID)
+		var user model.User
+		if err := repo.cache.Get(cacheKey, &user); err == nil {
+			return user.Avatar, nil
+		}
+	}
+
+	//数据库
+	var user *model.User
+	err := repo.db.Where("user_id = ?", userID).First(&user).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// 防止缓存穿透
+			if repo.cache != nil {
+				cacheKey := fmt.Sprintf("user:id:%d", userID)
+				var user = model.User{}
+				err := repo.cache.Set(cacheKey, user, 1*time.Minute)
+				if err != nil {
+					return "", errors.New("set cache failed")
+				}
+			}
+			return "", errors.New("get user status failed")
+		}
+		return "", errors.New("get user status failed")
+	}
+
+	//写入缓存
+	if repo.cache != nil {
+		// 分布式锁
+		lockKey := fmt.Sprintf("lock:user:id:%d", user.UserID)
+		if success, _ := repo.cache.Lock(lockKey, 10*time.Second); success {
+			defer repo.cache.Unlock(lockKey)
+
+			userCacheKey := fmt.Sprintf("user:id:%d", user.UserID)
+			err := repo.cache.Set(userCacheKey, &user, repo.cache.RandExp(5*time.Minute))
+			if err != nil {
+				return "", errors.New("set cache failed")
+			}
+
+			usernameCacheKey := fmt.Sprintf("user:username:%s", user.Username)
+			err = repo.cache.Set(usernameCacheKey, &user, repo.cache.RandExp(5*time.Minute))
+			if err != nil {
+				return "", errors.New("set cache failed")
+			}
+
+			emailCacheKey := fmt.Sprintf("user:email:%s", user.Email)
+			err = repo.cache.Set(emailCacheKey, &user, repo.cache.RandExp(5*time.Minute))
+			if err != nil {
+				return "", errors.New("set cache failed")
+			}
+		}
+	}
+
+	return user.Avatar, nil
+}

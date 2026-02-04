@@ -22,6 +22,8 @@ type Config struct {
 
 	// Files
 	CloudFileDir         string
+	AvatarDIR            string
+	DefaultAvatarPath    string
 	MaxFileSize          int64 // 单个文件大小限制 (GB)
 	NormalUserMaxStorage int64 // 非VIP用户存储空间限制 (GB)
 	LimitedSpeed         int64 // 非VIP用户下载速度限额 (MB) - 0 为不限速
@@ -43,6 +45,8 @@ func LoadConfig() *Config {
 		JWTIssuer:            getEnv("JWT_ISSUER", ""),
 		JWTExpireHours:       getEnvInt("JWT_EXPIRATION_HOURS", 24),
 		CloudFileDir:         getEnv("CLOUD_FILE_DIR", "D:\\"),
+		AvatarDIR:            getEnv("AVATAR_DIR", "D:\\"),
+		DefaultAvatarPath:    getEnv("DEFAULT_AVATAR_PATH", "D:\\"),
 		MaxFileSize:          int64(getEnvInt("MAX_FILE_SIZE", 25)),            // 25 GB
 		NormalUserMaxStorage: int64(getEnvInt("NORMAL_USER_MAX_STORAGE", 100)), //100 GB
 		LimitedSpeed:         int64(getEnvInt("LIMITED_SPEED", 10)),            // 10 MB/s

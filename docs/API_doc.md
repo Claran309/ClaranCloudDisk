@@ -394,6 +394,131 @@
 - 401: 令牌无效
 - 500: 获取邀请码列表失败
 
+### 9. 上传头像
+上传用户头像图片。
+
+- **URL**: `/user/upload_avatar`
+- **方法**: `POST`
+- **认证**: 需要 Bearer Token
+- **Content-Type**: `multipart/form-data`
+
+**请求头**:
+
+| 请求头 | 值 | 说明 |
+|--------|----|------|
+| Authorization | Bearer {token} | 访问令牌 |
+| Content-Type | multipart/form-data | 必须 |
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 说明 | 示例 | 限制 |
+|--------|------|------|------|------|------|
+| avatar | file | 是 | 头像图片文件 | (二进制文件) | 支持格式：jpg, jpeg, png, gif, webp |
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "头像上传成功",
+  "data": {
+    "avatar_url": "./Avatars/user_1_username.jpg",
+    "filename": "user_1_username.jpg",
+    "size": 15384,
+    "mime_type": "image/jpeg"
+  }
+}
+```
+
+**响应字段说明**:
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| avatar_url | string | 头像文件存储路径或URL |
+| filename | string | 存储的文件名 |
+| size | integer | 文件大小（字节） |
+| mime_type | string | 文件MIME类型 |
+
+**错误码**:
+- 400: 未选择文件或文件格式错误
+- 401: 令牌无效
+- 500: 头像上传失败
+
+### 10. 获取当前用户头像
+获取当前登录用户的头像图片。
+
+- **URL**: `/user/get_avatar`
+- **方法**: `GET`
+- **认证**: 需要 Bearer Token
+- **Content-Type**: 无
+
+**请求头**:
+
+| 请求头 | 值 | 说明 |
+|--------|----|------|
+| Authorization | Bearer {token} | 访问令牌 |
+
+**响应**:
+- 成功: 返回图片文件流
+- 用户无头像: 返回默认头像图片
+- 失败: 返回默认头像图片
+
+**响应头示例**:
+```
+Content-Type: image/jpeg
+Content-Disposition: inline; filename="user_1_avatar.jpg"
+Cache-Control: public, max-age=31536000
+```
+
+**注意**:
+1. 如果用户没有上传过头像，会返回系统默认头像
+2. 响应是图片文件流，不是JSON格式
+
+**支持的图片格式**:
+- `.jpg`, `.jpeg`: 返回 `image/jpeg`
+- `.png`: 返回 `image/png`
+- `.gif`: 返回 `image/gif`
+- `.webp`: 返回 `image/webp`
+- 其他格式: 返回 `application/octet-stream`
+
+### 11. 获取特定用户头像
+获取指定用户的头像图片。
+
+- **URL**: `/user/{id}/get_avatar`
+- **方法**: `GET`
+- **认证**: 不需要
+- **Content-Type**: 无
+
+**注意**: 此接口不需要认证，允许公开访问用户头像
+
+**路径参数**:
+
+| 参数名 | 类型 | 必填 | 说明 | 示例 |
+|--------|------|------|------|------|
+| id | integer | 是 | 用户ID | 1 |
+
+**响应**:
+- 成功: 返回图片文件流
+- 用户无头像: 返回默认头像图片
+- 失败: 返回默认头像图片
+
+**响应头示例**:
+```
+Content-Type: image/jpeg
+Content-Disposition: inline; filename="user_1_avatar.jpg"
+Cache-Control: public, max-age=31536000
+```
+
+**注意**:
+1. 此接口是公开的，不需要认证令牌
+2. 如果指定用户没有上传过头像，会返回系统默认头像
+3. 响应是图片文件流，不是JSON格式
+
+**支持的图片格式**:
+- `.jpg`, `.jpeg`: 返回 `image/jpeg`
+- `.png`: 返回 `image/png`
+- `.gif`: 返回 `image/gif`
+- `.webp`: 返回 `image/webp`
+- 其他格式: 返回 `application/octet-stream`
 
 ---
 

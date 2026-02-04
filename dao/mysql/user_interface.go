@@ -7,6 +7,10 @@ import (
 type UserRepository interface {
 	AddUser(user *model.User) error
 
+	// 头像
+	UploadAvatar(userID int, url string) error
+	GetAvatar(userID int) (string, error)
+
 	// 查询
 	SelectByUsername(username string) (*model.User, error)
 	SelectByEmail(email string) (*model.User, error)

@@ -4,17 +4,24 @@ import (
 	"ClaranCloudDisk/model"
 	"ClaranCloudDisk/service"
 	"ClaranCloudDisk/util"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
 
 type UserHandler struct {
-	userService *services.UserService
+	userService       *services.UserService
+	DefaultAvatarPath string
 }
 
-func NewUserHandler(userService *services.UserService) *UserHandler {
+func NewUserHandler(userService *services.UserService, DefaultAvatarPath string) *UserHandler {
 	return &UserHandler{
-		userService: userService,
+		userService:       userService,
+		DefaultAvatarPath: DefaultAvatarPath,
 	}
 }
 
@@ -184,4 +191,108 @@ func (h *UserHandler) InvitationCodeList(c *gin.Context) {
 		"total":                total,
 		"invitation_code_list": invitationCodes,
 	}, "获取成功")
+}
+
+func (h *UserHandler) UploadAvatar(c *gin.Context) {
+	// 从请求头中获取文件
+	file, err := c.FormFile("avatar")
+	if err != nil {
+		util.Error(c, 400, "请选择头像文件")
+		return
+	}
+	userID, _ := c.Get("user_id")
+	userName, _ := c.Get("username")
+
+	avatarURL, fileName, contentType, err := h.userService.UploadAvatar(file, userID.(int), userName.(string))
+	if err != nil {
+		util.Error(c, 500, "Upload Avatar failed")
+	}
+
+	// 返回成功响应
+	util.Success(c, gin.H{
+		"avatar_url": avatarURL,
+		"filename":   fileName,
+		"size":       file.Size,
+		"mime_type":  contentType,
+	}, "头像上传成功")
+}
+
+func (h *UserHandler) GetAvatar(c *gin.Context) {
+	//补货数据
+	userID, _ := c.Get("user_id")
+
+	//服务层
+	avatarPath, err := h.userService.GetAvatar(userID.(int))
+	if err != nil {
+		// 返回默认头像
+		avatarPath = h.DefaultAvatarPath
+	}
+
+	// 检查文件是否存在
+	if _, err := os.Stat(avatarPath); os.IsNotExist(err) {
+		// 文件不存在，返回默认头像
+		avatarPath = h.DefaultAvatarPath
+	}
+
+	// 设置响应头
+	filename := filepath.Base(avatarPath)
+	c.Header("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", filename))
+
+	// 设置Content-Type
+	ext := strings.ToLower(filepath.Ext(avatarPath))
+	switch ext {
+	case ".jpg", ".jpeg":
+		c.Header("Content-Type", "image/jpeg")
+	case ".png":
+		c.Header("Content-Type", "image/png")
+	case ".gif":
+		c.Header("Content-Type", "image/gif")
+	case ".webp":
+		c.Header("Content-Type", "image/webp")
+	default:
+		c.Header("Content-Type", "application/octet-stream")
+	}
+
+	// 6. 发送文件
+	c.File(avatarPath)
+}
+
+func (h *UserHandler) GetUniqueAvatar(c *gin.Context) {
+	//补货数据
+	userID, err := strconv.Atoi(c.Param("id"))
+
+	//服务层
+	avatarPath, err := h.userService.GetAvatar(userID)
+	if err != nil {
+		// 返回默认头像
+		avatarPath = h.DefaultAvatarPath
+	}
+
+	// 检查文件是否存在
+	if _, err := os.Stat(avatarPath); os.IsNotExist(err) {
+		// 文件不存在，返回默认头像
+		avatarPath = h.DefaultAvatarPath
+	}
+
+	// 设置响应头
+	filename := filepath.Base(avatarPath)
+	c.Header("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", filename))
+
+	// 设置Content-Type
+	ext := strings.ToLower(filepath.Ext(avatarPath))
+	switch ext {
+	case ".jpg", ".jpeg":
+		c.Header("Content-Type", "image/jpeg")
+	case ".png":
+		c.Header("Content-Type", "image/png")
+	case ".gif":
+		c.Header("Content-Type", "image/gif")
+	case ".webp":
+		c.Header("Content-Type", "image/webp")
+	default:
+		c.Header("Content-Type", "application/octet-stream")
+	}
+
+	// 6. 发送文件
+	c.File(avatarPath)
 }
