@@ -39,16 +39,19 @@ func main() {
 	tokenRepo := mysql.NewMysqlTokenRepo(db, redisClient.(*cache.RedisClient))
 	fileRepo := mysql.NewMysqlFileRepo(db, redisClient.(*cache.RedisClient))
 	shareRepo := mysql.NewMysqlShareRepo(db, redisClient.(*cache.RedisClient))
+	verificationRepo := cache.NewVerificationCodeCache(redisClient.(*cache.RedisClient))
 	// JWT工具
 	jwtUtil := jwt_util.NewJWTUtil(cfg)
 	// 业务逻辑层依赖
 	userService := services.NewUserService(userRepo, tokenRepo, jwtUtil, cfg.AvatarDIR)
 	fileService := services.NewUFileService(fileRepo, userRepo, cfg.CloudFileDir, cfg.MaxFileSize, cfg.NormalUserMaxStorage, cfg.LimitedSpeed)
 	shareService := services.NewShareService(shareRepo, fileRepo, userRepo, cfg.CloudFileDir)
+	verificationService := services.NewVerificationService(verificationRepo, cfg.Email)
 	// 处理器层依赖
 	userHandler := handlers.NewUserHandler(userService, cfg.DefaultAvatarPath)
 	fileHandler := handlers.NewFileHandler(fileService)
 	shareHandler := handlers.NewShareHandler(shareService)
+	verificationHandler := handlers.NewVerificationHandler(verificationService)
 	//创建中间件
 	jwtMiddleware := middleware.NewJWTMiddleware(jwtUtil, tokenRepo)
 
@@ -67,6 +70,8 @@ func main() {
 	user.POST("/upload_avatar", jwtMiddleware.JWTAuthentication(), userHandler.UploadAvatar)                     // 上传头像
 	user.GET("/get_avatar", jwtMiddleware.JWTAuthentication(), userHandler.GetAvatar)                            // 获取当前用户头像
 	user.GET("/:id/get_avatar", userHandler.GetUniqueAvatar)                                                     // 获取特定用户头像
+	user.POST("/get_verification_code", verificationHandler.GetVerificationCode)                                 // 获取邮箱验证码
+	user.POST("/verify_verification_code", verificationHandler.VerifyVerificationCode)                           // 验证邮箱验证码
 
 	//=======================================文件管理路由=============================================
 	file := r.Group("/file")

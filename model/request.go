@@ -45,3 +45,14 @@ type CreateShareRequest struct {
 	Password   string `json:"password"`
 	ExpireDays int    `json:"expire_days"`
 }
+
+// GetVerificationCodeRequest "/user/get_verification_code"
+type GetVerificationCodeRequest struct {
+	Email string
+}
+
+// VerifyVerificationCodeRequest "/user/verify_verification_code"
+type VerifyVerificationCodeRequest struct {
+	Email string
+	Code  string
+}

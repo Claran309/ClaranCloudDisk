@@ -8,6 +8,15 @@ import (
 	"github.com/joho/godotenv"
 )
 
+type EmailConfig struct {
+	SMTPHost  string
+	SMTPPort  int
+	SMTPUser  string
+	SMTPPass  string
+	FromName  string
+	FromEmail string
+}
+
 type RedisConfig struct {
 	Addr     string
 	Password string
@@ -33,6 +42,9 @@ type Config struct {
 
 	//redis
 	Redis RedisConfig
+
+	//Email
+	Email EmailConfig
 }
 
 func LoadConfig() *Config {
@@ -55,6 +67,14 @@ func LoadConfig() *Config {
 			Addr:     getEnv("REDIS_ADDR", "127.0.0.1:6379"),
 			Password: getEnv("REDIS_PASSWORD", ""),
 			DB:       getEnvInt("REDIS_DB", 0),
+		},
+		Email: EmailConfig{
+			SMTPHost:  getEnv("SMTP_HOST", ""),
+			SMTPPort:  getEnvInt("SMTP_PORT", 0),
+			SMTPUser:  getEnv("SMTP_USER", ""),
+			SMTPPass:  getEnv("SMTP_PASS", ""),
+			FromName:  getEnv("FROM_NAME", ""),
+			FromEmail: getEnv("FROM_EMAIL", ""),
 		},
 	}
 }
