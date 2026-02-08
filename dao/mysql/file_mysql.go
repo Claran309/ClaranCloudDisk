@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 
 	"gorm.io/gorm"
@@ -875,6 +876,146 @@ func (repo *mysqlFileRepo) SearchFiles(userID int, keywords string) ([]*model.Fi
 	}
 
 	return files, len(files), nil
+}
+
+func (repo *mysqlFileRepo) InitChunkUploadSession(fileHash string, chunkTotal int) error {
+	//分布式锁
+	lockKey := fmt.Sprintf("lock:chunkupload:%s", fileHash)
+	suc, _ := repo.cache.Lock(lockKey, 10*time.Second)
+	if !suc {
+		return fmt.Errorf("上传会话正在初始化，请稍候重试")
+	}
+	defer repo.cache.Unlock(lockKey)
+
+	//设置chunkTotal
+	totalKey := fmt.Sprintf("chunkupload:total:%s", fileHash)
+	err := repo.cache.Set(totalKey, chunkTotal, repo.cache.RandExp(24*time.Hour))
+	if err != nil {
+		return fmt.Errorf("设置chunkTotal失败")
+	}
+
+	//初始化分片
+	chunkKey := fmt.Sprintf("chunkupload:chunk:%s", fileHash)
+	err = repo.cache.Expire(chunkKey, repo.cache.RandExp(24*time.Hour))
+	if err != nil {
+		fmt.Printf("设置分片过期时间失败: %v\n", err)
+	}
+
+	return nil
+}
+
+func (repo *mysqlFileRepo) CleanChunkUploadSession(fileHash string) {
+	keys := []string{
+		fmt.Sprintf("chunkupload:chunk:%s", fileHash),
+		fmt.Sprintf("chunkupload:total:%s", fileHash),
+		fmt.Sprintf("lock:chunkupload:%s", fileHash),
+	}
+
+	for _, key := range keys {
+		err := repo.cache.Delete(key)
+		if err != nil {
+			fmt.Printf("删除缓存键失败: %v", err)
+		}
+	}
+}
+
+func (repo *mysqlFileRepo) CheckChunkUploadSession(fileHash string) error {
+	_, err := repo.cache.SMembers(fmt.Sprintf("chunkupload:chunk:%s", fileHash))
+	return err
+}
+
+func (repo *mysqlFileRepo) UpdateChunkUploadSession(fileHash string, chunkIndex int) error {
+	lockKey := fmt.Sprintf("lock:chunkupload:%s", fileHash)
+	suc, _ := repo.cache.Lock(lockKey, 10*time.Second)
+	if !suc {
+		return fmt.Errorf("分片正在上传中，请稍候重试")
+	}
+	defer repo.cache.Unlock(lockKey)
+
+	chunkKey := fmt.Sprintf("chunkupload:chunk:%s", fileHash)
+
+	//检查分片是否上传成功
+	exist, err := repo.cache.SIsMember(chunkKey, chunkIndex)
+	if err != nil {
+		return fmt.Errorf("检查分片状态失败")
+	}
+	if exist { // 已上传
+		return nil
+	}
+
+	//更新缓存
+	err = repo.cache.SAdd(chunkKey, chunkIndex)
+	if err != nil {
+		return fmt.Errorf("记录分片失败: %v", err)
+	}
+	err = repo.cache.Expire(chunkKey, repo.cache.RandExp(24*time.Hour))
+	if err != nil {
+		fmt.Printf("设置分片过期时间失败: %v\n", err)
+	}
+
+	return nil
+}
+
+func (repo *mysqlFileRepo) IsChunkUploadFinished(fileHash string) (bool, error) {
+	// 获取分片总数
+	totalKey := fmt.Sprintf("chunkupload:total:%s", fileHash)
+
+	var total int
+	err := repo.cache.Get(totalKey, &total)
+	if err != nil {
+		return false, err
+	}
+
+	//获取已上传分片数量
+	chunkKey := fmt.Sprintf("chunkupload:chunk:%s", fileHash)
+	chunks, err := repo.cache.SMembers(chunkKey)
+	if err != nil {
+		return false, err
+	}
+	uploaded := make([]int, 0, len(chunks))
+	for _, chunk := range chunks {
+		if idx, err := strconv.Atoi(chunk); err == nil {
+			uploaded = append(uploaded, idx)
+		}
+	}
+
+	return len(uploaded) >= total, nil
+}
+
+func (repo *mysqlFileRepo) GetChunks(fileHash string) ([]int, error) {
+	chunkKey := fmt.Sprintf("chunkupload:chunk:%s", fileHash)
+	chunksStr, err := repo.cache.SMembers(chunkKey)
+	if err != nil {
+		return nil, err
+	}
+	var chunks []int
+	for _, chunkStr := range chunksStr {
+		chunk, err := strconv.Atoi(chunkStr)
+		if err != nil {
+			return nil, err
+		}
+		chunks = append(chunks, chunk)
+	}
+
+	return chunks, nil
+}
+
+func (repo *mysqlFileRepo) GetUploadedChunks(fileHash string) ([]int, error) {
+	chunkKey := fmt.Sprintf("chunkupload:chunk:%s", fileHash)
+	chunksStr, err := repo.cache.SMembers(chunkKey)
+	if err != nil {
+		return nil, err
+	}
+	var chunks []int
+	for _, chunkStr := range chunksStr {
+		chunk, err := strconv.Atoi(chunkStr)
+		if err != nil {
+			return nil, err
+		}
+		chunks = append(chunks, chunk)
+	}
+
+	return chunks, nil
 }
 
 /*

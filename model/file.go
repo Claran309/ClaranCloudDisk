@@ -5,7 +5,7 @@ import (
 )
 
 type File struct {
-	ID     uint `gorm:"primary_key" json:"id"`
+	ID     uint `gorm:"primary_key;AUTO_INCREMENT" json:"id"`
 	UserID uint `gorm:"index;not null" json:"user_id"`
 
 	// 文件基本信息

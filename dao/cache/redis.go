@@ -51,6 +51,20 @@ func (rc *RedisClient) Delete(key string) error {
 	return rc.client.Del(rc.ctx, key).Err()
 }
 
+func (rc *RedisClient) SAdd(key string, members ...interface{}) error {
+	return rc.client.SAdd(rc.ctx, key, members...).Err()
+}
+
+func (rc *RedisClient) SMembers(key string) ([]string, error) {
+	return rc.client.SMembers(rc.ctx, key).Result()
+}
+func (rc *RedisClient) SIsMember(key string, member interface{}) (bool, error) {
+	return rc.client.SIsMember(rc.ctx, key, member).Result()
+}
+func (rc *RedisClient) Expire(key string, expiration time.Duration) error {
+	return rc.client.Expire(rc.ctx, key, expiration).Err()
+}
+
 // RandExp 防止缓存雪崩
 func (rc *RedisClient) RandExp(base time.Duration) time.Duration {
 	jitter := rand.Int63n(int64(base/5)) - int64(base/10)

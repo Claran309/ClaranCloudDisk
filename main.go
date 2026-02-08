@@ -76,19 +76,21 @@ func main() {
 	//=======================================文件管理路由=============================================
 	file := r.Group("/file")
 	file.Use(jwtMiddleware.JWTAuthentication())
-	file.POST("/upload", fileHandler.Upload)              // 上传文件
-	file.GET("/:id/download", fileHandler.Download)       // 下载文件
-	file.GET("/:id", fileHandler.GetFileInfo)             // 获取文件详细信息
-	file.GET("/list", fileHandler.GetFileList)            // 获取文件列表
-	file.DELETE("/:id", fileHandler.Delete)               // 删除文件
-	file.PUT("/:id/rename", fileHandler.Rename)           // 重命名文件
-	file.GET("/:id/preview", fileHandler.Preview)         // 预览文件
-	file.GET("/:id/content", fileHandler.GetContent)      // 获取文件内容
-	file.GET("/:id/preview-info", fileHandler.GetPreInfo) // 获取预览信息
-	file.GET("/star_list", fileHandler.GetStarList)       // 获取收藏列表
-	file.POST("/:id/star", fileHandler.Star)              // 收藏
-	file.POST("/:id/Unstar", fileHandler.Unstar)          // 取消收藏
-	file.POST("/search", fileHandler.SearchFile)          // 用户旗下的文件搜索
+	file.POST("/upload", fileHandler.Upload)                     // 上传文件
+	file.POST("/chunk_upload", fileHandler.ChunkUpload)          // 分片上传文件
+	file.GET("/chunk_upload/status", fileHandler.GetChunkStatus) // 断点传续(分片传输状态查询)
+	file.GET("/:id/download", fileHandler.Download)              // 下载文件
+	file.GET("/:id", fileHandler.GetFileInfo)                    // 获取文件详细信息
+	file.GET("/list", fileHandler.GetFileList)                   // 获取文件列表
+	file.DELETE("/:id", fileHandler.Delete)                      // 删除文件
+	file.PUT("/:id/rename", fileHandler.Rename)                  // 重命名文件
+	file.GET("/:id/preview", fileHandler.Preview)                // 预览文件
+	file.GET("/:id/content", fileHandler.GetContent)             // 获取文件内容
+	file.GET("/:id/preview-info", fileHandler.GetPreInfo)        // 获取预览信息
+	file.GET("/star_list", fileHandler.GetStarList)              // 获取收藏列表
+	file.POST("/:id/star", fileHandler.Star)                     // 收藏
+	file.POST("/:id/Unstar", fileHandler.Unstar)                 // 取消收藏
+	file.POST("/search", fileHandler.SearchFile)                 // 用户旗下的文件搜索
 	//=======================================分享管理路由=============================================
 	//下载或转存全部文件 = 逐个下载share下的全部文件
 	share := r.Group("/share")

@@ -59,6 +59,119 @@ func (h *FileHandler) Upload(c *gin.Context) {
 	}}, "文件上传成功")
 }
 
+func (h *FileHandler) ChunkUpload(c *gin.Context) {
+	//捕获数据
+	userID := c.GetInt("user_id")
+	//获取分片文件
+	file, err := c.FormFile("chunk")
+	if err != nil {
+		util.Error(c, 400, "无分片文件")
+		return
+	}
+	//获取分片状态数据
+	chunkIndexStr := c.PostForm("chunk_index") // Str
+	chunkTotalStr := c.PostForm("chunk_total") // Str
+	fileHash := c.PostForm("file_hash")
+	fileName := c.PostForm("file_name")
+	fileMimeType := c.PostForm("file_mime_type") // mimetype
+	if chunkIndexStr == "" || chunkTotalStr == "" || fileHash == "" || fileName == "" {
+		util.Error(c, 400, "请上传元数据")
+		return
+	}
+	//string -> int
+	chunkIndex, err := strconv.Atoi(chunkIndexStr)
+	if err != nil {
+		util.Error(c, 400, "chunkIndex应当是数字")
+		return
+	}
+	chunkTotal, err := strconv.Atoi(chunkTotalStr)
+	if err != nil {
+		util.Error(c, 400, "chunkTotal应当是数字")
+		return
+	}
+
+	if chunkIndex < 0 || chunkTotal < 1 {
+		util.Error(c, 400, "chunkIndex或chunkTotal错误")
+	}
+
+	fileReader, err := file.Open()
+	if err != nil {
+		util.Error(c, 500, "打开分片文件失败")
+		return
+	}
+	defer fileReader.Close()
+
+	chunkData := make([]byte, file.Size)
+	_, err = fileReader.Read(chunkData)
+	if err != nil {
+		util.Error(c, 500, "读取分片文件失败")
+		return
+	}
+
+	//服务层
+	//如果是第一个分片 -> 初始化分片上传
+	if chunkIndex == 0 {
+		err := h.fileService.InitChunkUpload(userID, fileName, fileHash, chunkTotal) // 初始化上传，创建临时文件夹
+		if err != nil {
+			util.Error(c, 500, "初始化上传失败")
+			return
+		}
+	}
+
+	//保存分片文件
+	err = h.fileService.SaveChunk(fileHash, userID, chunkIndex, chunkData)
+	if err != nil {
+		util.Error(c, 500, err.Error())
+		return
+	}
+
+	//如果是最后一个分片 -> 合并所有分片文件 & 返回上传成功响应
+	if chunkIndex == chunkTotal-1 {
+		file, err := h.fileService.MergeAllChunks(userID, fileHash, fileName, fileMimeType)
+		if err != nil {
+			util.Error(c, 500, "合并分片失败")
+			return
+		}
+		util.Success(c, gin.H{
+			"id":         file.ID,
+			"name":       file.Name,
+			"size":       file.Size,
+			"mime_type":  file.MimeType,
+			"created_at": file.CreatedAt,
+		}, "文件上传成功")
+	}
+
+	//返回响应
+	util.Success(c, gin.H{
+		"chunk_index": chunkIndex,
+		"chunk_total": chunkTotal,
+		"status":      "uncompleted",
+	}, "分片上传成功")
+}
+
+func (h *FileHandler) GetChunkStatus(c *gin.Context) {
+	//捕获数据
+	fileHash := c.Query("file_hash")
+	if fileHash == "" {
+		util.Error(c, 500, "缺少fileHash参数")
+		return
+	}
+
+	//服务层
+	uploadedChunks, err := h.fileService.GetUploadedChunks(fileHash)
+	if err != nil {
+		util.Error(c, 500, err.Error())
+		return
+	}
+
+	//成功响应
+	util.Success(c, gin.H{
+		"file_hash":       fileHash,
+		"uploaded_chunks": uploadedChunks,
+		"uploaded_count":  len(uploadedChunks),
+	}, "获取上传状态成功")
+}
+
 // Download /:id/download
 func (h *FileHandler) Download(c *gin.Context) {
 	//捕获数据

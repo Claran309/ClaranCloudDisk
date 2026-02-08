@@ -6,11 +6,13 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
 	"os"
 	"path/filepath"
+	"sort"
 	"time"
 )
 
@@ -397,4 +399,161 @@ func (s *FileService) SearchFile(userID int, req model.SearchFileRequest) ([]*mo
 
 	//返回结果
 	return files, total, nil
+}
+
+func (s *FileService) InitChunkUpload(userID int, fileName string, fileHash string, chunkTotal int) error {
+	//检查文件是否已存在
+	_, err := s.FileRepo.FindByHash(context.Background(), fileHash)
+	if err == nil {
+		return fmt.Errorf("文件已存在")
+	}
+
+	//初始化redis -> 开始记录当前分片上传状态
+	err = s.FileRepo.InitChunkUploadSession(fileHash, chunkTotal)
+	if err != nil {
+		return fmt.Errorf("初始化缓存失败: %v", err)
+	}
+
+	//创建临时分片文件夹
+	tmpPath := filepath.Join(s.uploadDir, fmt.Sprintf("user_%d", uint(userID)), "tmp_uploads/", fileHash) // ./user_:id/tmp_uploads/fileHash/
+	err = os.MkdirAll(tmpPath, 0755)
+	if err != nil {
+		//回滚
+		s.FileRepo.CleanChunkUploadSession(fileHash)
+		return fmt.Errorf("创建临时目录失败: %v", err)
+	}
+
+	return nil
+}
+
+func (s *FileService) SaveChunk(fileHash string, userID int, chunkIndex int, chunkData []byte) error {
+	//验证：判定redis数据是否过期 -> 结束会话
+	err := s.FileRepo.CheckChunkUploadSession(fileHash)
+	if err != nil {
+		if err.Error() == "redis: nil" {
+			return errors.New("上传会话已过期，请重新上传")
+		}
+		return fmt.Errorf("访问缓存失败: %v", err)
+	}
+
+	//将分片保存在临时文件夹内
+	tmpPath := filepath.Join(s.uploadDir, fmt.Sprintf("user_%d", uint(userID)), "tmp_uploads/", fileHash) // ./user_:id/tmp_uploads/fileHash/
+	chunkPath := filepath.Join(tmpPath, fmt.Sprintf("chunk_%d", chunkIndex))
+
+	err = os.WriteFile(chunkPath, chunkData, 0644)
+	if err != nil {
+		return fmt.Errorf("保存分片失败: %v", err)
+	}
+
+	//更新redis信息
+	err = s.FileRepo.UpdateChunkUploadSession(fileHash, chunkIndex)
+	if err != nil {
+		os.Remove(chunkPath)
+		return fmt.Errorf("更新分片状态失败: %v", err)
+	}
+
+	return nil
+}
+
+func (s *FileService) MergeAllChunks(userID int, fileHash string, fileName string, mimetype string) (*model.File, error) {
+	//在临时文件夹内合并所有分片
+	//分片信息是否完整
+	finished, err := s.FileRepo.IsChunkUploadFinished(fileHash)
+	if err != nil {
+		return &model.File{}, fmt.Errorf("检查上传状态失败: %v", err)
+	}
+	if !finished {
+		return &model.File{}, fmt.Errorf("已上传的分片不完整")
+	}
+
+	//获取分片列表
+	chunks, err := s.FileRepo.GetChunks(fileHash)
+	if err != nil {
+		return &model.File{}, fmt.Errorf("获取分片列表失败: %v", err)
+	}
+
+	//排序
+	sort.Ints(chunks)
+
+	//合并分片
+	filePath, fileSize, err := s.MergeChunks(userID, fileHash, fileName, chunks)
+	if err != nil {
+		return &model.File{}, fmt.Errorf("合并分片失败: %v", err)
+	}
+
+	//删除redis数据
+	s.FileRepo.CleanChunkUploadSession(fileHash)
+
+	//将分片整合为file
+	ext := filepath.Ext(filePath)
+	ext = ext[1:]
+	file := model.File{
+		UserID:   uint(userID),
+		Name:     fileName,
+		Filename: s.CreateName(fileName, uint(userID)),
+		Path:     filePath,
+		Size:     fileSize,
+		Hash:     fileHash,
+		MimeType: mimetype,
+		Ext:      ext,
+	}
+
+	//将file信息存储在mysql中
+	err = s.FileRepo.Create(context.Background(), &file)
+	if err != nil {
+		return &model.File{}, fmt.Errorf("上传文件失败: %v", err)
+	}
+
+	//更新file
+	finalFile, _ := s.FileRepo.FindByHash(context.Background(), fileHash)
+
+	return finalFile, nil
+}
+
+func (s *FileService) MergeChunks(userID int, fileHash string, filename string, chunks []int) (string, int64, error) {
+	fileName := s.CreateName(filename, uint(userID))
+	filePath := filepath.Join(s.uploadDir, fmt.Sprintf("user_%d", uint(userID)), fileName)
+	//创建目录
+	dir := filepath.Dir(filePath)
+	//0755 : 0-无特殊权限  7-rwx  5-rx  5-rx
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return "", -1, err
+	}
+	finalFile, err := os.Create(filePath)
+	if err != nil {
+		return "", -1, fmt.Errorf("创建最终文件失败: %v", err)
+	}
+	defer finalFile.Close()
+
+	//合并分片
+	var totalSize int64
+	tmpPath := filepath.Join(s.uploadDir, fmt.Sprintf("user_%d", uint(userID)), "tmp_uploads/", fileHash) // ./user_:id/tmp_uploads/fileHash/
+	for _, chunkIndex := range chunks {
+		//寻找当前chunk路径
+		chunkPath := filepath.Join(tmpPath, fmt.Sprintf("chunk_%d", chunkIndex))
+
+		//打开当前chunk
+		chunkFile, err := os.Open(chunkPath)
+		if err != nil {
+			return "", -1, fmt.Errorf("打开分片失败: %v", err)
+		}
+
+		//将chunk内容合并到file
+		writer, err := io.Copy(finalFile, chunkFile)
+		chunkFile.Close()
+		if err != nil {
+			return "", -1, fmt.Errorf("合并分片失败: %v", err)
+		}
+
+		totalSize += writer
+
+		//删除当前临时chunk
+		os.Remove(chunkPath)
+	}
+
+	return filePath, totalSize, nil
+}
+
+func (s *FileService) GetUploadedChunks(fileHash string) ([]int, error) {
+	return s.FileRepo.GetUploadedChunks(fileHash)
 }

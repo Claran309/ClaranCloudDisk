@@ -1393,7 +1393,156 @@ Content-Range: bytes 0-1023/102400  # 仅在使用Range请求时包含
 - 在大量文件中快速定位特定文件
 - 按文件类型或扩展名筛选文件
 
+以下是新增分片上传和断点续传相关接口的API文档说明：
 
+---
+
+## 文件管理模块
+
+### 14. 分片上传文件
+通过分片的方式上传大文件，支持断点续传。
+
+- **URL**: `/file/chunk_upload`
+- **方法**: `POST`
+- **认证**: 需要 Bearer Token
+- **Content-Type**: `multipart/form-data`
+
+**请求头**:
+
+| 请求头 | 值 | 说明 |
+|--------|----|------|
+| Authorization | Bearer {token} | 访问令牌 |
+| Content-Type | multipart/form-data | 必须 |
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 说明 | 示例 |
+|--------|------|------|------|------|
+| chunk | file | 是 | 分片文件 | (二进制文件) |
+| chunk_index | string | 是 | 当前分片索引，从0开始 | "0" |
+| chunk_total | string | 是 | 总分片数 | "10" |
+| file_hash | string | 是 | 整个文件的哈希值（用于标识文件） | "a1b2c3d4e5f6" |
+| file_name | string | 是 | 原始文件名 | "example.zip" |
+| file_mime_type | string | 是 | 文件MIME类型 | "application/zip" |
+
+**请求示例**:
+```javascript
+// 前端示例代码
+const formData = new FormData();
+formData.append('chunk', fileChunk);
+formData.append('chunk_index', '0');
+formData.append('chunk_total', '10');
+formData.append('file_hash', 'a1b2c3d4e5f6');
+formData.append('file_name', 'example.zip');
+formData.append('file_mime_type', 'application/zip');
+
+fetch('/api/file/chunk_upload', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer your_token',
+  },
+  body: formData
+});
+```
+
+**响应示例**:
+
+1. 当上传的不是最后一个分片时：
+```json
+{
+  "code": 200,
+  "message": "分片上传成功",
+  "data": {
+    "chunk_index": 0,
+    "chunk_total": 10,
+    "status": "uncompleted"
+  }
+}
+```
+
+2. 当上传的是最后一个分片，且合并成功时：
+```json
+{
+  "code": 200,
+  "message": "文件上传成功",
+  "data": {
+    "id": 1,
+    "name": "example.zip",
+    "size": 1024000,
+    "mime_type": "application/zip",
+    "created_at": "2023-10-01T12:00:00Z"
+  }
+}
+```
+
+**错误码**:
+- 400: 参数错误（如缺少必要参数、参数格式错误、chunk_index或chunk_total为负数等）
+- 401: 令牌无效
+- 500: 服务器内部错误（如初始化上传失败、保存分片失败、合并分片失败等）
+
+### 15. 获取分片上传状态
+查询指定文件（通过文件哈希标识）已经上传了哪些分片，用于断点续传。
+
+- **URL**: `/file/chunk_upload/status`
+- **方法**: `GET`
+- **认证**: 需要 Bearer Token
+- **Content-Type**: 无
+
+**请求头**:
+
+| 请求头 | 值 | 说明 |
+|--------|----|------|
+| Authorization | Bearer {token} | 访问令牌 |
+
+**查询参数**:
+
+| 参数名 | 类型 | 必填 | 说明 | 示例 |
+|--------|------|------|------|------|
+| file_hash | string | 是 | 文件的哈希值 | "a1b2c3d4e5f6" |
+
+**请求示例**:
+```http
+GET /api/file/chunk_upload/status?file_hash=a1b2c3d4e5f6 HTTP/1.1
+Authorization: Bearer your_token
+```
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "获取上传状态成功",
+  "data": {
+    "file_hash": "a1b2c3d4e5f6",
+    "uploaded_chunks": [0, 1, 2, 3, 4],
+    "uploaded_count": 5
+  }
+}
+```
+
+**响应字段说明**:
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| file_hash | string | 文件哈希值 |
+| uploaded_chunks | array | 已上传的分片索引数组 |
+| uploaded_count | integer | 已上传的分片数量 |
+
+**错误码**:
+- 400: 缺少file_hash参数
+- 401: 令牌无效
+- 500: 服务器内部错误
+
+---
+
+#### 分片上传和断点续传完整上传流程说明
+1. **计算文件哈希**: 前端计算文件的哈希值
+2. **查询上传状态**: 调用`GET /file/chunk_upload/status`获取已上传的分片
+3. **准备分片**: 将文件分割成固定大小的分片
+4. **上传分片**:
+    - 第一个分片（chunk_index=0）：服务器初始化上传
+    - 中间分片：逐个上传
+    - 最后一个分片：服务器合并所有分片
+5. **完成上传**: 收到文件上传成功的响应
 
 ---
 
