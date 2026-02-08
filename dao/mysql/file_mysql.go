@@ -55,29 +55,19 @@ func (repo *mysqlFileRepo) Create(ctx context.Context, file *model.File) error {
 				return errors.New("set cache failed")
 			}
 
-			// userID:parentID:total - parentTotal
-			parentTotalCacheKey := fmt.Sprintf("userID:%d:parentID:%d:total", file.UserID, file.ParentID)
-			if exists := repo.cache.Exists(parentTotalCacheKey); exists { //若存在k-v
-				err = repo.cache.Delete(parentTotalCacheKey)
-				if err != nil {
-					return errors.New("set cache failed")
-				}
+			// userID - files
+			userIDCacheKey := fmt.Sprintf("userID:%d", file.UserID)
+			err = repo.cache.Delete(userIDCacheKey)
+			if err != nil {
+				return errors.New("set cache failed")
 			}
 
-			// userID:parentID:id - file
-			// 不需要：查询时按照total一次性写入
-
-			// userID:total - userTotal
-			userTotalCacheKey := fmt.Sprintf("userID:%d:total", file.UserID)
-			if exists := repo.cache.Exists(userTotalCacheKey); exists { //若存在
-				err = repo.cache.Delete(userTotalCacheKey)
-				if err != nil {
-					return errors.New("set cache failed")
-				}
+			// ParentID - files
+			parentIDCacheKey := fmt.Sprintf("parentID:%d", file.ParentID)
+			err = repo.cache.Delete(parentIDCacheKey)
+			if err != nil {
+				return errors.New("set cache failed")
 			}
-
-			// userID:id - file
-			// 不需要：查询时按照total一次性写入
 		}
 		return nil
 	})
@@ -107,29 +97,19 @@ func (repo *mysqlFileRepo) Update(ctx context.Context, file *model.File) error {
 				return errors.New("set cache failed")
 			}
 
-			// userID:parentID:total - parentTotal
-			parentTotalCacheKey := fmt.Sprintf("userID:%d:parentID:%d:total", file.UserID, file.ParentID)
-			if exists := repo.cache.Exists(parentTotalCacheKey); exists { //若存在k-v
-				err = repo.cache.Delete(parentTotalCacheKey)
-				if err != nil {
-					return errors.New("set cache failed")
-				}
+			// userID - files
+			userIDCacheKey := fmt.Sprintf("userID:%d", file.UserID)
+			err = repo.cache.Delete(userIDCacheKey)
+			if err != nil {
+				return errors.New("set cache failed")
 			}
 
-			// userID:parentID:id - file
-			// 不需要：查询时按照total一次性写入
-
-			// userID:total - userTotal
-			userTotalCacheKey := fmt.Sprintf("userID:%d:total", file.UserID)
-			if exists := repo.cache.Exists(userTotalCacheKey); exists { //若存在
-				err = repo.cache.Delete(userTotalCacheKey)
-				if err != nil {
-					return errors.New("set cache failed")
-				}
+			// ParentID - files
+			parentIDCacheKey := fmt.Sprintf("parentID:%d", file.ParentID)
+			err = repo.cache.Delete(parentIDCacheKey)
+			if err != nil {
+				return errors.New("set cache failed")
 			}
-
-			// userID:id - file
-			// 不需要：查询时按照total一次性写入
 		}
 		return nil
 	})
@@ -163,29 +143,19 @@ func (repo *mysqlFileRepo) Delete(ctx context.Context, id uint) error {
 				return errors.New("set cache failed")
 			}
 
-			// userID:parentID:total - parentTotal
-			parentTotalCacheKey := fmt.Sprintf("userID:%d:parentID:%d:total", file.UserID, file.ParentID)
-			if exists := repo.cache.Exists(parentTotalCacheKey); exists { //若存在k-v
-				err = repo.cache.Delete(parentTotalCacheKey)
-				if err != nil {
-					return errors.New("set cache failed")
-				}
+			// userID - files
+			userIDCacheKey := fmt.Sprintf("userID:%d", file.UserID)
+			err = repo.cache.Delete(userIDCacheKey)
+			if err != nil {
+				return errors.New("set cache failed")
 			}
 
-			// userID:parentID:id - file
-			// 不需要：查询时按照total一次性写入
-
-			// userID:total - userTotal
-			userTotalCacheKey := fmt.Sprintf("userID:%d:total", file.UserID)
-			if exists := repo.cache.Exists(userTotalCacheKey); exists { //若存在
-				err = repo.cache.Delete(userTotalCacheKey)
-				if err != nil {
-					return errors.New("set cache failed")
-				}
+			// ParentID - files
+			parentIDCacheKey := fmt.Sprintf("parentID:%d", file.ParentID)
+			err = repo.cache.Delete(parentIDCacheKey)
+			if err != nil {
+				return errors.New("set cache failed")
 			}
-
-			// userID:id - file
-			// 不需要：查询时按照total一次性写入
 		}
 		return nil
 	})
@@ -218,29 +188,19 @@ func (repo *mysqlFileRepo) Star(ctx context.Context, fileID int64) error {
 				return errors.New("set cache failed")
 			}
 
-			// userID:parentID:total - parentTotal
-			parentTotalCacheKey := fmt.Sprintf("userID:%d:parentID:%d:total", file.UserID, file.ParentID)
-			if exists := repo.cache.Exists(parentTotalCacheKey); exists { //若存在k-v
-				err = repo.cache.Delete(parentTotalCacheKey)
-				if err != nil {
-					return errors.New("set cache failed")
-				}
+			// userID - files
+			userIDCacheKey := fmt.Sprintf("userID:%d", file.UserID)
+			err = repo.cache.Delete(userIDCacheKey)
+			if err != nil {
+				return errors.New("set cache failed")
 			}
 
-			// userID:parentID:id - file
-			// 不需要：查询时按照total一次性写入
-
-			// userID:total - userTotal
-			userTotalCacheKey := fmt.Sprintf("userID:%d:total", file.UserID)
-			if exists := repo.cache.Exists(userTotalCacheKey); exists { //若存在
-				err = repo.cache.Delete(userTotalCacheKey)
-				if err != nil {
-					return errors.New("set cache failed")
-				}
+			// ParentID - files
+			parentIDCacheKey := fmt.Sprintf("parentID:%d", file.ParentID)
+			err = repo.cache.Delete(parentIDCacheKey)
+			if err != nil {
+				return errors.New("set cache failed")
 			}
-
-			// userID:id - file
-			// 不需要：查询时按照total一次性写入
 		}
 		return nil
 	})
@@ -273,29 +233,19 @@ func (repo *mysqlFileRepo) Unstar(ctx context.Context, fileID int64) error {
 				return errors.New("set cache failed")
 			}
 
-			// userID:parentID:total - parentTotal
-			parentTotalCacheKey := fmt.Sprintf("userID:%d:parentID:%d:total", file.UserID, file.ParentID)
-			if exists := repo.cache.Exists(parentTotalCacheKey); exists { //若存在k-v
-				err = repo.cache.Delete(parentTotalCacheKey)
-				if err != nil {
-					return errors.New("set cache failed")
-				}
+			// userID - files
+			userIDCacheKey := fmt.Sprintf("userID:%d", file.UserID)
+			err = repo.cache.Delete(userIDCacheKey)
+			if err != nil {
+				return errors.New("set cache failed")
 			}
 
-			// userID:parentID:id - file
-			// 不需要：查询时按照total一次性写入
-
-			// userID:total - userTotal
-			userTotalCacheKey := fmt.Sprintf("userID:%d:total", file.UserID)
-			if exists := repo.cache.Exists(userTotalCacheKey); exists { //若存在
-				err = repo.cache.Delete(userTotalCacheKey)
-				if err != nil {
-					return errors.New("set cache failed")
-				}
+			// ParentID - files
+			parentIDCacheKey := fmt.Sprintf("parentID:%d", file.ParentID)
+			err = repo.cache.Delete(parentIDCacheKey)
+			if err != nil {
+				return errors.New("set cache failed")
 			}
-
-			// userID:id - file
-			// 不需要：查询时按照total一次性写入
 		}
 		return nil
 	})
@@ -331,8 +281,7 @@ func (repo *mysqlFileRepo) FindByID(ctx context.Context, id uint) (*model.File, 
 		return nil, errors.New("failed to get file")
 	}
 
-	//写入缓存
-	//栈思想存储用户和父文件夹旗下的文件
+	//写入缓存=
 	if repo.cache != nil {
 		lockKey := fmt.Sprintf("lock:file:%d", file.ID)
 		if suc, _ := repo.cache.Lock(lockKey, 10*time.Second); suc {
@@ -352,58 +301,24 @@ func (repo *mysqlFileRepo) FindByID(ctx context.Context, id uint) (*model.File, 
 				return &model.File{}, errors.New("set cache failed")
 			}
 
-			// userID:parentID:total - parentTotal
-			parentTotalCacheKey := fmt.Sprintf("userID:%d:parentID:%d:total", file.UserID, file.ParentID)
-			if exists := repo.cache.Exists(parentTotalCacheKey); !exists { //若未初始化
-				//初始化文件数量为0
-				err = repo.cache.Set(parentTotalCacheKey, 0, repo.cache.RandExp(5*time.Minute))
-				if err != nil {
-					return &model.File{}, errors.New("set cache failed")
-				}
-			}
-			var parentIndex int64
-			//获取文件数量
-			err = repo.cache.Get(parentTotalCacheKey, &parentIndex)
+			// userID - files
+			userIDCacheKey := fmt.Sprintf("userID:%d", file.UserID)
+			err = repo.cache.SAdd(userIDCacheKey, file)
 			if err != nil {
 				return &model.File{}, errors.New("set cache failed")
 			}
-			parentIndex++ //文件数量自增1
-			err = repo.cache.Set(parentTotalCacheKey, parentIndex, repo.cache.RandExp(5*time.Minute))
+			err = repo.cache.Expire(userIDCacheKey, repo.cache.RandExp(5*time.Minute))
 			if err != nil {
 				return &model.File{}, errors.New("set cache failed")
 			}
 
-			// userID:parentID:id - file
-			parentFileCacheKey := fmt.Sprintf("userID:%d:parentID:%d:Index:%d", file.UserID, file.ParentID, parentIndex)
-			err = repo.cache.Set(parentFileCacheKey, file, repo.cache.RandExp(5*time.Minute))
+			// parentID - files
+			parentIDCacheKey := fmt.Sprintf("parentID:%d", file.ParentID)
+			err = repo.cache.SAdd(parentIDCacheKey, file)
 			if err != nil {
 				return &model.File{}, errors.New("set cache failed")
 			}
-
-			// userID:total - userTotal
-			userTotalCacheKey := fmt.Sprintf("userID:%d:total", file.UserID)
-			if exists := repo.cache.Exists(userTotalCacheKey); !exists { //若未初始化
-				//初始化文件数量为0
-				err = repo.cache.Set(userTotalCacheKey, 0, repo.cache.RandExp(5*time.Minute))
-				if err != nil {
-					return &model.File{}, errors.New("set cache failed")
-				}
-			}
-			var userIndex int64
-			//获取文件数量
-			err = repo.cache.Get(userTotalCacheKey, &userIndex)
-			if err != nil {
-				return &model.File{}, errors.New("set cache failed")
-			}
-			userIndex++ //文件数量自增1
-			err = repo.cache.Set(userTotalCacheKey, userIndex, repo.cache.RandExp(5*time.Minute))
-			if err != nil {
-				return &model.File{}, errors.New("set cache failed")
-			}
-
-			// userID:id - file
-			userFileCacheKey := fmt.Sprintf("userID:%d:Index:%d", file.UserID, userIndex)
-			err = repo.cache.Set(userFileCacheKey, file, repo.cache.RandExp(5*time.Minute))
+			err = repo.cache.Expire(parentIDCacheKey, repo.cache.RandExp(5*time.Minute))
 			if err != nil {
 				return &model.File{}, errors.New("set cache failed")
 			}
@@ -464,58 +379,24 @@ func (repo *mysqlFileRepo) FindByHash(ctx context.Context, hash string) (*model.
 				return &model.File{}, errors.New("set cache failed")
 			}
 
-			// userID:parentID:total - parentTotal
-			parentTotalCacheKey := fmt.Sprintf("userID:%d:parentID:%d:total", file.UserID, file.ParentID)
-			if exists := repo.cache.Exists(parentTotalCacheKey); !exists { //若未初始化
-				//初始化文件数量为0
-				err = repo.cache.Set(parentTotalCacheKey, 0, repo.cache.RandExp(5*time.Minute))
-				if err != nil {
-					return &model.File{}, errors.New("set cache failed")
-				}
-			}
-			var parentIndex int64
-			//获取文件数量
-			err = repo.cache.Get(parentTotalCacheKey, &parentIndex)
+			// userID - files
+			userIDCacheKey := fmt.Sprintf("userID:%d", file.UserID)
+			err = repo.cache.SAdd(userIDCacheKey, file)
 			if err != nil {
 				return &model.File{}, errors.New("set cache failed")
 			}
-			parentIndex++ //文件数量自增1
-			err = repo.cache.Set(parentTotalCacheKey, parentIndex, repo.cache.RandExp(5*time.Minute))
+			err = repo.cache.Expire(userIDCacheKey, repo.cache.RandExp(5*time.Minute))
 			if err != nil {
 				return &model.File{}, errors.New("set cache failed")
 			}
 
-			// userID:parentID:id - file
-			parentFileCacheKey := fmt.Sprintf("userID:%d:parentID:%d:Index:%d", file.UserID, file.ParentID, parentIndex)
-			err = repo.cache.Set(parentFileCacheKey, file, repo.cache.RandExp(5*time.Minute))
+			// parentID - files
+			parentIDCacheKey := fmt.Sprintf("parentID:%d", file.ParentID)
+			err = repo.cache.SAdd(parentIDCacheKey, file)
 			if err != nil {
 				return &model.File{}, errors.New("set cache failed")
 			}
-
-			// userID:total - userTotal
-			userTotalCacheKey := fmt.Sprintf("userID:%d:total", file.UserID)
-			if exists := repo.cache.Exists(userTotalCacheKey); !exists { //若未初始化
-				//初始化文件数量为0
-				err = repo.cache.Set(userTotalCacheKey, 0, repo.cache.RandExp(5*time.Minute))
-				if err != nil {
-					return &model.File{}, errors.New("set cache failed")
-				}
-			}
-			var userIndex int64
-			//获取文件数量
-			err = repo.cache.Get(userTotalCacheKey, &userIndex)
-			if err != nil {
-				return &model.File{}, errors.New("set cache failed")
-			}
-			userIndex++ //文件数量自增1
-			err = repo.cache.Set(userTotalCacheKey, userIndex, repo.cache.RandExp(5*time.Minute))
-			if err != nil {
-				return &model.File{}, errors.New("set cache failed")
-			}
-
-			// userID:id - file
-			userFileCacheKey := fmt.Sprintf("userID:%d:Index:%d", file.UserID, userIndex)
-			err = repo.cache.Set(userFileCacheKey, file, repo.cache.RandExp(5*time.Minute))
+			err = repo.cache.Expire(parentIDCacheKey, repo.cache.RandExp(5*time.Minute))
 			if err != nil {
 				return &model.File{}, errors.New("set cache failed")
 			}
@@ -529,22 +410,18 @@ func (repo *mysqlFileRepo) FindByUserID(ctx context.Context, userID uint) ([]*mo
 	// Get user file: get files in range userID:id[1:userTotal]
 	//从缓存中查找
 	if repo.cache != nil {
-		var flag bool = false
-		cacheKey := fmt.Sprintf("userID:%d:total", userID)
-		var total int64
-		err := repo.cache.Get(cacheKey, &total)
-		var files []*model.File
-		for i := int64(1); i <= total; i++ {
-			fileCacheKey := fmt.Sprintf("userID:%d:Index:%d", userID, i)
-			var file *model.File
-			err = repo.cache.Get(fileCacheKey, &file)
-			if err == nil { // 找到了
-				flag = true
+		userIDCacheKey := fmt.Sprintf("userID:%d", userID)
+		jsonDatas, err := repo.cache.SMembers(userIDCacheKey)
+		if err == nil {
+			var files []*model.File
+			for _, jsonData := range jsonDatas {
+				var file model.File
+				err = json.Unmarshal([]byte(jsonData), &file)
+				if err == nil {
+					files = append(files, &file)
+				}
 			}
-			files = append(files, file)
-		}
-		if flag {
-			return files, total, nil
+			return files, int64(len(jsonDatas)), nil
 		}
 	}
 
@@ -587,58 +464,24 @@ func (repo *mysqlFileRepo) FindByUserID(ctx context.Context, userID uint) ([]*mo
 					return nil, -1, errors.New("set cache failed")
 				}
 
-				// userID:parentID:total - parentTotal
-				parentTotalCacheKey := fmt.Sprintf("userID:%d:parentID:%d:total", file.UserID, file.ParentID)
-				if exists := repo.cache.Exists(parentTotalCacheKey); !exists { //若未初始化
-					//初始化文件数量为0
-					err = repo.cache.Set(parentTotalCacheKey, 0, repo.cache.RandExp(5*time.Minute))
-					if err != nil {
-						return nil, -1, errors.New("set cache failed")
-					}
-				}
-				var parentIndex int64
-				//获取文件数量
-				err = repo.cache.Get(parentTotalCacheKey, &parentIndex)
+				// userID - files
+				userIDCacheKey := fmt.Sprintf("userID:%d", file.UserID)
+				err = repo.cache.SAdd(userIDCacheKey, file)
 				if err != nil {
 					return nil, -1, errors.New("set cache failed")
 				}
-				parentIndex++ //文件数量自增1
-				err = repo.cache.Set(parentTotalCacheKey, parentIndex, repo.cache.RandExp(5*time.Minute))
+				err = repo.cache.Expire(userIDCacheKey, repo.cache.RandExp(5*time.Minute))
 				if err != nil {
 					return nil, -1, errors.New("set cache failed")
 				}
 
-				// userID:parentID:id - file
-				parentFileCacheKey := fmt.Sprintf("userID:%d:parentID:%d:Index:%d", file.UserID, file.ParentID, parentIndex)
-				err = repo.cache.Set(parentFileCacheKey, file, repo.cache.RandExp(5*time.Minute))
+				// parentID - files
+				parentIDCacheKey := fmt.Sprintf("parentID:%d", file.ParentID)
+				err = repo.cache.SAdd(parentIDCacheKey, file)
 				if err != nil {
 					return nil, -1, errors.New("set cache failed")
 				}
-
-				// userID:total - userTotal
-				userTotalCacheKey := fmt.Sprintf("userID:%d:total", file.UserID)
-				if exists := repo.cache.Exists(userTotalCacheKey); !exists { //若未初始化
-					//初始化文件数量为0
-					err = repo.cache.Set(userTotalCacheKey, 0, repo.cache.RandExp(5*time.Minute))
-					if err != nil {
-						return nil, -1, errors.New("set cache failed")
-					}
-				}
-				var userIndex int64
-				//获取文件数量
-				err = repo.cache.Get(userTotalCacheKey, &userIndex)
-				if err != nil {
-					return nil, -1, errors.New("set cache failed")
-				}
-				userIndex++ //文件数量自增1
-				err = repo.cache.Set(userTotalCacheKey, userIndex, repo.cache.RandExp(5*time.Minute))
-				if err != nil {
-					return nil, -1, errors.New("set cache failed")
-				}
-
-				// userID:id - file
-				userFileCacheKey := fmt.Sprintf("userID:%d:Index:%d", file.UserID, userIndex)
-				err = repo.cache.Set(userFileCacheKey, file, repo.cache.RandExp(5*time.Minute))
+				err = repo.cache.Expire(parentIDCacheKey, repo.cache.RandExp(5*time.Minute))
 				if err != nil {
 					return nil, -1, errors.New("set cache failed")
 				}
@@ -654,22 +497,18 @@ func (repo *mysqlFileRepo) FindByParentID(ctx context.Context, parentID *uint, u
 	// Get user file: get files in range userID:id[1:userTotal]
 	//从缓存中查找
 	if repo.cache != nil {
-		var flag bool = false
-		cacheKey := fmt.Sprintf("userID:%d:parentID:%d:total", userID, parentID)
-		var total int64
-		err := repo.cache.Get(cacheKey, &total)
-		var files []*model.File
-		for i := int64(1); i <= total; i++ {
-			fileCacheKey := fmt.Sprintf("userID:%d:parentID:%d:Index:%d", userID, parentID, i)
-			var file *model.File
-			err = repo.cache.Get(fileCacheKey, &file)
-			if err == nil { // 找到了
-				flag = true
+		parentIDCacheKey := fmt.Sprintf("parentID:%d", parentID)
+		jsonDatas, err := repo.cache.SMembers(parentIDCacheKey)
+		if err == nil {
+			var files []*model.File
+			for _, jsonData := range jsonDatas {
+				var file model.File
+				err = json.Unmarshal([]byte(jsonData), &file)
+				if err == nil {
+					files = append(files, &file)
+				}
 			}
-			files = append(files, file)
-		}
-		if flag {
-			return files, total, nil
+			return files, int64(len(jsonDatas)), nil
 		}
 	}
 
@@ -712,58 +551,24 @@ func (repo *mysqlFileRepo) FindByParentID(ctx context.Context, parentID *uint, u
 					return nil, -1, errors.New("set cache failed")
 				}
 
-				// userID:parentID:total - parentTotal
-				parentTotalCacheKey := fmt.Sprintf("userID:%d:parentID:%d:total", file.UserID, file.ParentID)
-				if exists := repo.cache.Exists(parentTotalCacheKey); !exists { //若未初始化
-					//初始化文件数量为0
-					err = repo.cache.Set(parentTotalCacheKey, 0, repo.cache.RandExp(5*time.Minute))
-					if err != nil {
-						return nil, -1, errors.New("set cache failed")
-					}
-				}
-				var parentIndex int64
-				//获取文件数量
-				err = repo.cache.Get(parentTotalCacheKey, &parentIndex)
+				// userID - files
+				userIDCacheKey := fmt.Sprintf("userID:%d", file.UserID)
+				err = repo.cache.SAdd(userIDCacheKey, file)
 				if err != nil {
 					return nil, -1, errors.New("set cache failed")
 				}
-				parentIndex++ //文件数量自增1
-				err = repo.cache.Set(parentTotalCacheKey, parentIndex, repo.cache.RandExp(5*time.Minute))
+				err = repo.cache.Expire(userIDCacheKey, repo.cache.RandExp(5*time.Minute))
 				if err != nil {
 					return nil, -1, errors.New("set cache failed")
 				}
 
-				// userID:parentID:id - file
-				parentFileCacheKey := fmt.Sprintf("userID:%d:parentID:%d:Index:%d", file.UserID, file.ParentID, parentIndex)
-				err = repo.cache.Set(parentFileCacheKey, file, repo.cache.RandExp(5*time.Minute))
+				// parentID - files
+				parentIDCacheKey := fmt.Sprintf("parentID:%d", file.ParentID)
+				err = repo.cache.SAdd(parentIDCacheKey, file)
 				if err != nil {
 					return nil, -1, errors.New("set cache failed")
 				}
-
-				// userID:total - userTotal
-				userTotalCacheKey := fmt.Sprintf("userID:%d:total", file.UserID)
-				if exists := repo.cache.Exists(userTotalCacheKey); !exists { //若未初始化
-					//初始化文件数量为0
-					err = repo.cache.Set(userTotalCacheKey, 0, repo.cache.RandExp(5*time.Minute))
-					if err != nil {
-						return nil, -1, errors.New("set cache failed")
-					}
-				}
-				var userIndex int64
-				//获取文件数量
-				err = repo.cache.Get(userTotalCacheKey, &userIndex)
-				if err != nil {
-					return nil, -1, errors.New("set cache failed")
-				}
-				userIndex++ //文件数量自增1
-				err = repo.cache.Set(userTotalCacheKey, userIndex, repo.cache.RandExp(5*time.Minute))
-				if err != nil {
-					return nil, -1, errors.New("set cache failed")
-				}
-
-				// userID:id - file
-				userFileCacheKey := fmt.Sprintf("userID:%d:Index:%d", file.UserID, userIndex)
-				err = repo.cache.Set(userFileCacheKey, file, repo.cache.RandExp(5*time.Minute))
+				err = repo.cache.Expire(parentIDCacheKey, repo.cache.RandExp(5*time.Minute))
 				if err != nil {
 					return nil, -1, errors.New("set cache failed")
 				}
@@ -776,12 +581,12 @@ func (repo *mysqlFileRepo) FindByParentID(ctx context.Context, parentID *uint, u
 
 func (repo *mysqlFileRepo) CountByUserID(ctx context.Context, userID uint) (int64, error) {
 	//从缓存中查找
+	//从缓存中查找
 	if repo.cache != nil {
-		key := fmt.Sprintf("userID:%d:sum", userID)
-		var sum int64
-		err := repo.cache.Get(key, &sum)
+		userIDCacheKey := fmt.Sprintf("userID:%d", userID)
+		jsonData, err := repo.cache.SMembers(userIDCacheKey)
 		if err == nil {
-			return sum, nil
+			return int64(len(jsonData)), nil
 		}
 	}
 
@@ -791,34 +596,9 @@ func (repo *mysqlFileRepo) CountByUserID(ctx context.Context, userID uint) (int6
 		Where("user_id = ?", userID).
 		Count(&count).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			//穿透
-			if repo.cache != nil {
-				cacheKey := fmt.Sprintf("userID:%d:sum", userID)
-				var file = model.File{}
-				err := repo.cache.Set(cacheKey, file, 1*time.Minute)
-				if err != nil {
-					return -1, errors.New("failed to set cache")
-				}
-			}
-			return -1, errors.New("file not found")
-		}
 		return -1, errors.New("failed to get file")
 	}
 
-	//写入缓存
-	if repo.cache != nil {
-		lockKey := fmt.Sprintf("lock:userID:%d", userID)
-		if suc, _ := repo.cache.Lock(lockKey, 10*time.Second); suc {
-			defer repo.cache.Unlock(lockKey)
-
-			key := fmt.Sprintf("userID:%d:sum", userID)
-			err := repo.cache.Set(key, count, repo.cache.RandExp(5*time.Minute))
-			if err != nil {
-				return -1, errors.New("set cache failed")
-			}
-		}
-	}
 	return count, err
 }
 
