@@ -56,3 +56,8 @@ type VerifyVerificationCodeRequest struct {
 	Email string
 	Code  string
 }
+
+// SearchFileRequest "/file/search"
+type SearchFileRequest struct {
+	Keywords string
+}

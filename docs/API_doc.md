@@ -1280,6 +1280,123 @@ Content-Range: bytes 0-1023/102400  # 仅在使用Range请求时包含
 4. 文件内容接口更适合需要原始字节流的场景，如视频播放器
 5. 预览信息接口可用于前端判断文件是否可预览并获取相关URL
 
+以下是新增文件搜索接口的API文档说明：
+
+---
+
+## 文件管理模块
+
+### 13. 搜索文件
+在当前用户旗下的文件中进行搜索。
+
+- **URL**: `/file/search`
+- **方法**: `POST`
+- **认证**: 需要 Bearer Token
+- **Content-Type**: `application/json`
+
+**请求头**:
+
+| 请求头 | 值 | 说明 |
+|--------|----|------|
+| Authorization | Bearer {token} | 访问令牌 |
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 说明 | 示例 |
+|--------|------|------|------|------|
+| keywords | string | 是 | 搜索关键词 | "example" |
+
+**请求体示例**:
+```json
+{
+  "keywords": "example"
+}
+```
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "搜索成功",
+  "data": {
+    "files": [
+      {
+        "id": 1,
+        "user_id": 1,
+        "name": "example.txt",
+        "filename": "example_12345.txt",
+        "path": "/uploads/example.txt",
+        "size": 1024,
+        "hash": "a1b2c3d4e5f6",
+        "mime_type": "text/plain",
+        "ext": "txt",
+        "is_starred": false,
+        "is_dir": false,
+        "parent_id": null,
+        "is_shared": false,
+        "created_at": "2023-10-01T12:00:00Z"
+      },
+      {
+        "id": 2,
+        "user_id": 1,
+        "name": "example_image.jpg",
+        "filename": "example_image_12345.jpg",
+        "path": "/uploads/example_image.jpg",
+        "size": 204800,
+        "hash": "g7h8i9j0k1l2",
+        "mime_type": "image/jpeg",
+        "ext": "jpg",
+        "is_starred": true,
+        "is_dir": false,
+        "parent_id": null,
+        "is_shared": false,
+        "created_at": "2023-10-01T12:30:00Z"
+      }
+    ],
+    "total": 2
+  }
+}
+```
+
+**响应字段说明**:
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| files[].id | integer | 文件ID |
+| files[].user_id | integer | 文件所有者ID |
+| files[].name | string | 原始文件名 |
+| files[].filename | string | 存储文件名 |
+| files[].path | string | 文件存储路径 |
+| files[].size | integer | 文件大小（字节） |
+| files[].hash | string | 文件哈希值（用于秒传） |
+| files[].mime_type | string | 文件MIME类型 |
+| files[].ext | string | 文件扩展名 |
+| files[].is_starred | boolean | 是否被收藏 |
+| files[].is_dir | boolean | 是否是文件夹 |
+| files[].parent_id | integer/null | 父文件夹ID，顶层文件为null |
+| files[].is_shared | boolean | 是否已分享 |
+| files[].created_at | string | 文件创建时间 |
+| total | integer | 搜索到的文件总数 |
+
+**错误码**:
+- 400: 请求参数错误（如关键词为空）或搜索过程中发生错误
+- 401: 令牌无效
+- 500: 服务器内部错误
+
+**注意事项**:
+1. 此接口仅搜索当前用户旗下的文件，不会搜索其他用户的文件
+2. 搜索条件为关键词，通常会对文件名、扩展名等字段进行模糊匹配
+3. 返回的文件列表包含完整的文件信息，与文件列表接口返回的字段一致
+
+**使用场景**:
+- 用户需要快速查找自己云盘中的某个文件时，可以通过关键词搜索
+- 在大量文件中快速定位特定文件
+- 按文件类型或扩展名筛选文件
+
+
+
+---
+
 ## 分享管理模块
 
 ### 1. 创建文件分享

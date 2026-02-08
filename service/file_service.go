@@ -387,3 +387,14 @@ func (s *FileService) GetMimeType(ctx context.Context, file *model.File) (string
 	}
 	return "other", nil
 }
+
+func (s *FileService) SearchFile(userID int, req model.SearchFileRequest) ([]*model.File, int, error) {
+	//数据层
+	files, total, err := s.FileRepo.SearchFiles(userID, req.Keywords)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	//返回结果
+	return files, total, nil
+}

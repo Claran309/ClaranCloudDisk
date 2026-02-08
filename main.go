@@ -88,6 +88,7 @@ func main() {
 	file.GET("/star_list", fileHandler.GetStarList)       // 获取收藏列表
 	file.POST("/:id/star", fileHandler.Star)              // 收藏
 	file.POST("/:id/Unstar", fileHandler.Unstar)          // 取消收藏
+	file.POST("/search", fileHandler.SearchFile)          // 用户旗下的文件搜索
 	//=======================================分享管理路由=============================================
 	//下载或转存全部文件 = 逐个下载share下的全部文件
 	share := r.Group("/share")

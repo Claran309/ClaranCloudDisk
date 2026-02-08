@@ -605,3 +605,24 @@ func (h *FileHandler) GetContent(c *gin.Context) {
 		"file": previewInfo,
 	}, "获取预览信息成功")
 }
+
+func (h *FileHandler) SearchFile(c *gin.Context) {
+	//补货数据
+	userID := c.GetInt("user_id")
+	var req model.SearchFileRequest
+	if err := c.ShouldBind(&req); err != nil {
+		util.Error(c, 500, err.Error())
+	}
+
+	//服务层
+	files, total, err := h.fileService.SearchFile(userID, req)
+	if err != nil {
+		util.Error(c, 400, err.Error())
+	}
+
+	//成功响应
+	util.Success(c, gin.H{
+		"files": files,
+		"total": total,
+	}, "搜索成功")
+}

@@ -4,6 +4,7 @@ import (
 	"ClaranCloudDisk/dao/cache"
 	"ClaranCloudDisk/model"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -788,6 +789,21 @@ func (repo *mysqlFileRepo) CountByUserID(ctx context.Context, userID uint) (int6
 	err := repo.db.WithContext(ctx).Model(&model.File{}).
 		Where("user_id = ?", userID).
 		Count(&count).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			//穿透
+			if repo.cache != nil {
+				cacheKey := fmt.Sprintf("userID:%d:sum", userID)
+				var file = model.File{}
+				err := repo.cache.Set(cacheKey, file, 1*time.Minute)
+				if err != nil {
+					return -1, errors.New("failed to set cache")
+				}
+			}
+			return -1, errors.New("file not found")
+		}
+		return -1, errors.New("failed to get file")
+	}
 
 	//写入缓存
 	if repo.cache != nil {
@@ -803,6 +819,62 @@ func (repo *mysqlFileRepo) CountByUserID(ctx context.Context, userID uint) (int6
 		}
 	}
 	return count, err
+}
+
+func (repo *mysqlFileRepo) SearchFiles(userID int, keywords string) ([]*model.File, int, error) {
+	//缓存
+	if repo.cache != nil {
+		cacheKey := fmt.Sprintf("search:userID:%d:keywords:%s", userID, keywords)
+		var jsonData string
+		err := repo.cache.Get(cacheKey, &jsonData)
+		if err == nil {
+			var files []*model.File
+			err = json.Unmarshal([]byte(jsonData), &files)
+			if err != nil {
+				return nil, -1, err
+			}
+			return files, len(files), nil
+		}
+	}
+
+	//数据库
+	var files []*model.File
+	err := repo.db.Where("user_id = ? AND name LIKE ?", userID, "%"+keywords+"%").Find(&files).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			if repo.cache != nil {
+				cacheKey := fmt.Sprintf("search:userID:%d:keywords:%s", userID, keywords)
+				var file = model.File{}
+				err := repo.cache.Set(cacheKey, file, 1*time.Minute)
+				if err != nil {
+					return nil, -1, errors.New("failed to set cache")
+				}
+			}
+			return nil, -1, err
+		}
+		return nil, -1, err
+	}
+
+	//写入缓存
+	jsonData, err := json.Marshal(files)
+	if err != nil {
+		return nil, -1, err
+	}
+	if repo.cache != nil {
+		lockKey := fmt.Sprintf("lock:userID:%d", userID)
+		suc, _ := repo.cache.Lock(lockKey, 10*time.Second)
+		if suc {
+			defer repo.cache.Unlock(lockKey)
+
+			cacheKey := fmt.Sprintf("search:userID:%d:keywords:%s", userID, keywords)
+			err := repo.cache.Set(cacheKey, jsonData, repo.cache.RandExp(5*time.Minute))
+			if err != nil {
+				return nil, -1, errors.New("set cache failed")
+			}
+		}
+	}
+
+	return files, len(files), nil
 }
 
 /*

@@ -16,4 +16,5 @@ type FileRepository interface {
 	FindByUserID(ctx context.Context, userID uint) ([]*model.File, int64, error)
 	FindByParentID(ctx context.Context, parentID *uint, userID uint) ([]*model.File, int64, error)
 	CountByUserID(ctx context.Context, userID uint) (int64, error)
+	SearchFiles(userID int, keywords string) ([]*model.File, int, error)
 }
