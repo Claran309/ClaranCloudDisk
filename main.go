@@ -109,7 +109,7 @@ func main() {
 	share.POST("/create", shareHandler.CreateShare)                           // 新建分享
 	share.GET("/mine", shareHandler.CheckMine)                                // 查看自己的分享列表
 	share.DELETE("/:unique_id", shareHandler.DeleteShare)                     // 删除分享
-	share.GET("/:unique_id", shareHandler.CheckMine)                          // 查看分享
+	share.GET("/:unique_id", shareHandler.GetShareInfo)                       // 查看分享
 	share.GET("/:unique_id/:file_id/download", shareHandler.DownloadSpecFile) // 下载指定文件
 	share.POST("/:unique_id/:file_id/save", shareHandler.SaveSpecFile)        // 转存指定文件
 
@@ -120,6 +120,8 @@ func main() {
 }
 
 /*
+API sum: 37
+
 各路由请求体应有数据：
 
 ===================="/user"======================
