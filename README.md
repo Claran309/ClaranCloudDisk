@@ -4,7 +4,7 @@
 
 基本开发完成，待docker部署
 
-初始化邀请码：`"FirstAdminCode"`
+初始化邀请码：`"FirstAdminCode"` 
 
 ## 相关文档
 | 文档                                                                                   | 备注     |
