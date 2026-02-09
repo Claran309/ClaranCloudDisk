@@ -4,8 +4,10 @@ import (
 	"ClaranCloudDisk/model"
 	"ClaranCloudDisk/service"
 	"ClaranCloudDisk/util"
+	"ClaranCloudDisk/util/minIO"
 	"fmt"
-	"os"
+	"mime"
+	"net/http"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -16,12 +18,14 @@ import (
 type UserHandler struct {
 	userService       *services.UserService
 	DefaultAvatarPath string
+	minioClient       *minIO.MinIOClient
 }
 
-func NewUserHandler(userService *services.UserService, DefaultAvatarPath string) *UserHandler {
+func NewUserHandler(userService *services.UserService, DefaultAvatarPath string, minioClient *minIO.MinIOClient) *UserHandler {
 	return &UserHandler{
 		userService:       userService,
 		DefaultAvatarPath: DefaultAvatarPath,
+		minioClient:       minioClient,
 	}
 }
 
@@ -228,11 +232,20 @@ func (h *UserHandler) GetAvatar(c *gin.Context) {
 		avatarPath = h.DefaultAvatarPath
 	}
 
-	// 检查文件是否存在
-	if _, err := os.Stat(avatarPath); os.IsNotExist(err) {
+	//检查文件是否存在
+	if exist, err := h.minioClient.Exists(c.Request.Context(), avatarPath); err == nil {
 		// 文件不存在，返回默认头像
-		avatarPath = h.DefaultAvatarPath
+		if !exist {
+			avatarPath = h.DefaultAvatarPath
+		}
 	}
+	//=====================================================
+	// 检查文件是否存在
+	//if _, err := os.Stat(avatarPath); os.IsNotExist(err) {
+	//	// 文件不存在，返回默认头像
+	//	avatarPath = h.DefaultAvatarPath
+	//}
+	//=====================================================
 
 	// 设置响应头
 	filename := filepath.Base(avatarPath)
@@ -253,8 +266,22 @@ func (h *UserHandler) GetAvatar(c *gin.Context) {
 		c.Header("Content-Type", "application/octet-stream")
 	}
 
-	// 6. 发送文件
-	c.File(avatarPath)
+	//从minIO获取字节数据
+	data, err := h.minioClient.GetBytes(c.Request.Context(), avatarPath)
+	if err != nil {
+		util.Error(c, 500, "visit minIO failed")
+		return
+	}
+
+	mimeType := mime.TypeByExtension(ext)
+
+	//发送字节数据
+	c.Data(http.StatusOK, mimeType, data)
+
+	//=====================================================
+	// 发送文件
+	//c.File(avatarPath)
+	//=====================================================
 }
 
 func (h *UserHandler) GetUniqueAvatar(c *gin.Context) {
@@ -268,11 +295,20 @@ func (h *UserHandler) GetUniqueAvatar(c *gin.Context) {
 		avatarPath = h.DefaultAvatarPath
 	}
 
-	// 检查文件是否存在
-	if _, err := os.Stat(avatarPath); os.IsNotExist(err) {
+	//检查文件是否存在
+	if exist, err := h.minioClient.Exists(c.Request.Context(), avatarPath); err == nil {
 		// 文件不存在，返回默认头像
-		avatarPath = h.DefaultAvatarPath
+		if !exist {
+			avatarPath = h.DefaultAvatarPath
+		}
 	}
+	//=====================================================
+	// 检查文件是否存在
+	//if _, err := os.Stat(avatarPath); os.IsNotExist(err) {
+	//	// 文件不存在，返回默认头像
+	//	avatarPath = h.DefaultAvatarPath
+	//}
+	//=====================================================
 
 	// 设置响应头
 	filename := filepath.Base(avatarPath)
@@ -293,6 +329,20 @@ func (h *UserHandler) GetUniqueAvatar(c *gin.Context) {
 		c.Header("Content-Type", "application/octet-stream")
 	}
 
-	// 6. 发送文件
-	c.File(avatarPath)
+	//从minIO获取字节数据
+	data, err := h.minioClient.GetBytes(c.Request.Context(), avatarPath)
+	if err != nil {
+		util.Error(c, 500, "visit minIO failed")
+		return
+	}
+
+	mimeType := mime.TypeByExtension(ext)
+
+	//发送字节数据
+	c.Data(http.StatusOK, mimeType, data)
+
+	//=====================================================
+	// 发送文件
+	//c.File(avatarPath)
+	//=====================================================
 }

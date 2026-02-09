@@ -19,9 +19,7 @@
         - [x] 获取文件列表
         - [x] 重命名文件
         - [x] 查看文件信息
-- [ ] 项目说明文档
-- [x] 文件哈希化实现秒传
-- [x] 编写api说明文档
+        - [x] 文件秒传
 - [x] 测试基本功能无误
 - [x] Redis缓存
 - [x] 完善错误抛出机制
@@ -42,23 +40,25 @@
     - [x] 重构文件缓存kv
     - [x] 分片上传
     - [x] 断点传续
-    - [ ] 回收站
+    - [x] 回收站
     - 集成MinIO
-      - [ ] Docker镜像
-      - [ ] 新增util_storage
-      - [ ] 重构file_service
-      - [ ] 分片合并后的file -> minIO
-      - [ ] 头像
-      - [ ] Download流式传输
-      - [ ] 环境变量配置
+      - [x] Docker镜像
+      - [x] 新增util_storage
+      - [x] 重构file_service
+      - [x] 分片合并后的file -> minIO
+      - [x] 头像
+      - [x] Download流式传输
+      - [x] 环境变量配置
   - 分享模块
     - [x] 加密链接
     - [x] 批量分享
+- [x] 编写api说明文档
 - [ ] Viper
 - [ ] Zap
 - [ ] Dockerfile
 - [ ] Docker-compose
 - [ ] Dockerhub
 - [ ] XSS,SQL注入,CSRF
+- [ ] 项目说明文档
 - [ ] 测试代码（AI写）
 - [ ] vibe 前端

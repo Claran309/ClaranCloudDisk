@@ -5,6 +5,8 @@ import (
 	"ClaranCloudDisk/model"
 	"ClaranCloudDisk/util"
 	"ClaranCloudDisk/util/jwt_util"
+	"ClaranCloudDisk/util/minIO"
+	"context"
 	"crypto/rand"
 	"errors"
 	"fmt"
@@ -12,24 +14,25 @@ import (
 	"math/big"
 	"mime"
 	"mime/multipart"
-	"os"
 	"path/filepath"
 	"strings"
 )
 
 type UserService struct {
-	UserRepo  mysql.UserRepository
-	TokenRepo mysql.TokenRepository
-	jwtUtil   jwt_util.Util
-	AvatarDIR string
+	UserRepo    mysql.UserRepository
+	TokenRepo   mysql.TokenRepository
+	jwtUtil     jwt_util.Util
+	AvatarDIR   string
+	minioClient *minIO.MinIOClient
 }
 
-func NewUserService(userRepo mysql.UserRepository, tokenRepo mysql.TokenRepository, jwtUtil jwt_util.Util, avatarDIR string) *UserService {
+func NewUserService(userRepo mysql.UserRepository, tokenRepo mysql.TokenRepository, jwtUtil jwt_util.Util, avatarDIR string, minioClient *minIO.MinIOClient) *UserService {
 	return &UserService{
-		UserRepo:  userRepo,
-		TokenRepo: tokenRepo,
-		jwtUtil:   jwtUtil,
-		AvatarDIR: avatarDIR,
+		UserRepo:    userRepo,
+		TokenRepo:   tokenRepo,
+		jwtUtil:     jwtUtil,
+		AvatarDIR:   avatarDIR,
+		minioClient: minioClient,
 	}
 }
 
@@ -348,26 +351,43 @@ func (s *UserService) UploadAvatar(file *multipart.FileHeader, userID int, userN
 	//目录
 	userDir := filepath.Join(s.AvatarDIR, fmt.Sprintf("user_%d", userID))
 
-	// 确保目录存在
-	if err := os.MkdirAll(userDir, 0755); err != nil {
-		return "", "", "", errors.New("创建存储目录失败")
+	//获取字节数组
+	bytes, err := io.ReadAll(src)
+	if err != nil {
+		return "", "", "", errors.New("读取文件失败")
 	}
 
 	// 创建目标文件
 	dstPath := filepath.Join(userDir, fileName)
-	dst, err := os.Create(dstPath)
-	if err != nil {
-		return "", "", "", errors.New("创建目标文件失败")
-	}
-	defer dst.Close()
 
-	// 复制文件内容到服务器
-	_, err = io.Copy(dst, src)
+	//保存文件到minIO
+	err = s.minioClient.Save(context.Background(), dstPath, bytes, ext)
 	if err != nil {
-		// 删除不完整的文件
-		os.Remove(dstPath)
-		return "", "", "", errors.New("保存文件失败")
+		return "", "", "", err
 	}
+
+	////============================================非minIO=============================================================
+	//// 确保目录存在
+	//if err := os.MkdirAll(userDir, 0755); err != nil {
+	//	return "", "", "", errors.New("创建存储目录失败")
+	//}
+	//
+	//
+	//dst, err := os.Create(dstPath)
+	//if err != nil {
+	//	return "", "", "", errors.New("创建目标文件失败")
+	//}
+	//defer dst.Close()
+	//// 创建目标文件
+	//	dstPath := filepath.Join(userDir, fileName)
+	//// 复制文件内容到服务器
+	//_, err = io.Copy(dst, src)
+	//if err != nil {
+	//	// 删除不完整的文件
+	//	os.Remove(dstPath)
+	//	return "", "", "", errors.New("保存文件失败")
+	//}
+	////================================================================================================================
 
 	// 构建访问URL
 	// 因为这个URL是新上传的头像，所以不管之前有没有上传过头像都没关系

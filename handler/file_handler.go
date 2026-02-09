@@ -4,10 +4,10 @@ import (
 	"ClaranCloudDisk/model"
 	"ClaranCloudDisk/service"
 	"ClaranCloudDisk/util"
+	"ClaranCloudDisk/util/minIO"
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strconv"
 	"time"
 
@@ -16,11 +16,13 @@ import (
 
 type FileHandler struct {
 	fileService *services.FileService
+	minioClient *minIO.MinIOClient
 }
 
-func NewFileHandler(fileService *services.FileService) *FileHandler {
+func NewFileHandler(fileService *services.FileService, minioClient *minIO.MinIOClient) *FileHandler {
 	return &FileHandler{
 		fileService: fileService,
+		minioClient: minioClient,
 	}
 }
 
@@ -200,21 +202,21 @@ func (h *FileHandler) Download(c *gin.Context) {
 	//提供Size用于为客户端提供下载进度和剩余时间
 	c.Header("Content-Length", fmt.Sprintf("%d", file.Size))
 
-	//发送文件
-	fileContent, err := os.Open(file.Path)
+	//从minIO获取文件流
+	stream, err := h.minioClient.GetStream(c, file.Path)
 	if err != nil {
-		util.Error(c, 500, "打开文件失败: "+err.Error())
+		util.Error(c, 500, "从minIO获取文件失败"+err.Error())
 		return
 	}
-	defer fileContent.Close()
+	defer stream.Close()
 
-	// 不限速
+	//不限速
 	if limitedSpeed == 0 {
-		io.Copy(c.Writer, fileContent)
+		io.Copy(c.Writer, stream)
 		return
 	}
 
-	// 限速处理
+	//限速
 	bufferSize := int64(64 * 1024) // 64KB缓冲区
 	if limitedSpeed < bufferSize {
 		bufferSize = limitedSpeed
@@ -237,7 +239,7 @@ func (h *FileHandler) Download(c *gin.Context) {
 				}
 
 				// 读取文件
-				n, err := fileContent.Read(buf[:readSize])
+				n, err := stream.Read(buf[:readSize])
 				if n > 0 {
 					// 写入HTTP响应
 					_, writeErr := c.Writer.Write(buf[:n])
@@ -259,6 +261,68 @@ func (h *FileHandler) Download(c *gin.Context) {
 			return // 上下文取消
 		}
 	}
+
+	//=============================================================================================================
+	//发送文件
+	//fileContent, err := os.Open(file.Path)
+	//if err != nil {
+	//	util.Error(c, 500, "打开文件失败: "+err.Error())
+	//	return
+	//}
+	//defer fileContent.Close()
+	//
+	//// 不限速
+	//if limitedSpeed == 0 {
+	//	io.Copy(c.Writer, fileContent)
+	//	return
+	//}
+	//
+	//// 限速处理
+	//bufferSize := int64(64 * 1024) // 64KB缓冲区
+	//if limitedSpeed < bufferSize {
+	//	bufferSize = limitedSpeed
+	//}
+	//
+	//buf := make([]byte, bufferSize)
+	//ticker := time.NewTicker(time.Second)
+	//defer ticker.Stop()
+	//
+	//for {
+	//	select {
+	//	case <-ticker.C:
+	//		// 每秒最多读取limitedSpeed字节
+	//		bytesRead := int64(0)
+	//		for bytesRead < limitedSpeed {
+	//			remaining := limitedSpeed - bytesRead
+	//			readSize := remaining
+	//			if readSize > bufferSize {
+	//				readSize = bufferSize
+	//			}
+	//
+	//			// 读取文件
+	//			n, err := fileContent.Read(buf[:readSize])
+	//			if n > 0 {
+	//				// 写入HTTP响应
+	//				_, writeErr := c.Writer.Write(buf[:n])
+	//				if writeErr != nil {
+	//					return
+	//				}
+	//				c.Writer.Flush()      // 立即发送给客户端
+	//				bytesRead += int64(n) // 累计已读取字节
+	//			}
+	//
+	//			if err != nil {
+	//				if err == io.EOF {
+	//					return // 文件读取完成
+	//				}
+	//				return
+	//			}
+	//		}
+	//	case <-ctx.Done():
+	//		return // 上下文取消
+	//	}
+	//}
+	//=============================================================================================================
 }
 
 // GetFileInfo /:id
@@ -424,11 +488,22 @@ func (h *FileHandler) Preview(c *gin.Context) {
 		return
 	}
 
-	//是否存在
-	if _, err := os.Stat(file.Path); os.IsNotExist(err) {
+	exist, err := h.minioClient.Exists(c, file.Path)
+	if err != nil {
+		util.Error(c, 500, "检查文件失败"+err.Error())
+		return
+	}
+	if !exist {
 		util.Error(c, 404, "文件已丢失")
 		return
 	}
+	//=============================================================================================================
+	//是否存在
+	//if _, err := os.Stat(file.Path); os.IsNotExist(err) {
+	//	util.Error(c, 404, "文件已丢失")
+	//	return
+	//}
+	//=============================================================================================================
 
 	//服务层获取文件类型
 	fileType, err := h.fileService.GetMimeType(ctx, file)
@@ -465,7 +540,15 @@ func (h *FileHandler) PreImage(c *gin.Context, file *model.File) {
 	c.Header("Content-Type", MineType)
 	c.Header("Cache-Control", "public, max-age=31536000") // 缓存1年
 
-	c.File(file.Path)
+	//从minIO获取文件流
+	stream, err := h.minioClient.GetStream(c, file.Path)
+	if err != nil {
+		util.Error(c, 500, "从minIO获取文件失败"+err.Error())
+		return
+	}
+	defer stream.Close()
+
+	io.Copy(c.Writer, stream)
 }
 
 func (h *FileHandler) PreVideo(c *gin.Context, file *model.File) {
@@ -484,8 +567,18 @@ func (h *FileHandler) PreVideo(c *gin.Context, file *model.File) {
 	c.Header("Content-Type", MineType)
 	c.Header("Accept-Ranges", "bytes")
 
+	//从minIO获取文件流
+	stream, err := h.minioClient.GetStream(c.Request.Context(), file.Path)
+	if err != nil {
+		util.Error(c, 500, "从minIO获取文件失败"+err.Error())
+		return
+	}
+	defer stream.Close()
+
+	http.ServeContent(c.Writer, c.Request, file.Name, time.Now(), stream.(io.ReadSeeker))
+
 	//神器
-	http.ServeFile(c.Writer, c.Request, file.Path)
+	//http.ServeFile(c.Writer, c.Request, file.Path)
 }
 
 func (h *FileHandler) PreAudio(c *gin.Context, file *model.File) {
@@ -498,8 +591,18 @@ func (h *FileHandler) PreAudio(c *gin.Context, file *model.File) {
 	c.Header("Content-Type", MineType)
 	c.Header("Accept-Ranges", "bytes")
 
+	//从minIO获取文件流
+	stream, err := h.minioClient.GetStream(c.Request.Context(), file.Path)
+	if err != nil {
+		util.Error(c, 500, "从minIO获取文件失败"+err.Error())
+		return
+	}
+	defer stream.Close()
+
+	http.ServeContent(c.Writer, c.Request, file.Name, time.Now(), stream.(io.ReadSeeker))
+
 	//神器
-	http.ServeFile(c.Writer, c.Request, file.Path)
+	//http.ServeFile(c.Writer, c.Request, file.Path)
 }
 
 func (h *FileHandler) PreDoc(c *gin.Context, file *model.File) {
@@ -510,7 +613,6 @@ func (h *FileHandler) PreDoc(c *gin.Context, file *model.File) {
 		// PDF文件可以直接预览
 		c.Header("Content-Type", "application/pdf")
 		c.Header("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", file.Name))
-		c.File(file.Path)
 	case "txt", "md", "js", "css", "html", "json", "xml", "yaml", "yml":
 		// 文本类文件
 		h.PreText(c, file)
@@ -518,24 +620,45 @@ func (h *FileHandler) PreDoc(c *gin.Context, file *model.File) {
 		// 其他文档类型，返回下载
 		c.Header("Content-Type", "application/octet-stream")
 		c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", file.Name))
-		c.File(file.Path)
 	}
+
+	//从minIO获取文件流
+	stream, err := h.minioClient.GetStream(c, file.Path)
+	if err != nil {
+		util.Error(c, 500, "从minIO获取文件失败"+err.Error())
+		return
+	}
+	defer stream.Close()
+
+	io.Copy(c.Writer, stream)
 }
 
 func (h *FileHandler) PreText(c *gin.Context, file *model.File) {
 	c.Header("Content-Type", "text/plain; charset=utf-8")
 	c.Header("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", file.Name))
 
-	// 打开文件
-	fileContent, err := os.Open(file.Path)
+	//从minIO获取文件流
+	stream, err := h.minioClient.GetStream(c, file.Path)
 	if err != nil {
-		util.Error(c, 500, "打开文件失败: "+err.Error())
+		util.Error(c, 500, "从minIO获取文件失败"+err.Error())
 		return
 	}
-	defer fileContent.Close()
+	defer stream.Close()
 
-	// 发送文件内容
-	io.Copy(c.Writer, fileContent)
+	io.Copy(c.Writer, stream)
+	//=============================================================================================================
+	// 打开文件
+	//fileContent, err := os.Open(file.Path)
+	//if err != nil {
+	//	util.Error(c, 500, "打开文件失败: "+err.Error())
+	//	return
+	//}
+	//defer fileContent.Close()
+	//
+	//// 发送文件内容
+	//io.Copy(c.Writer, fileContent)
+	//=============================================================================================================
+
 }
 
 func (h *FileHandler) GetPreInfo(c *gin.Context) {
@@ -555,11 +678,18 @@ func (h *FileHandler) GetPreInfo(c *gin.Context) {
 		return
 	}
 
-	// 检查文件是否存在
-	if _, err := os.Stat(file.Path); os.IsNotExist(err) {
+	exist, err := h.minioClient.Exists(c, file.Path)
+	if err != nil || !exist {
 		util.Error(c, 404, "文件已丢失")
 		return
 	}
+	//=============================================================================================================
+	// 检查文件是否存在
+	//if _, err := os.Stat(file.Path); os.IsNotExist(err) {
+	//	util.Error(c, 404, "文件已丢失")
+	//	return
+	//}
+	//=============================================================================================================
 
 	//服务层获取文件类型
 	fileType, err := h.fileService.GetMimeType(ctx, file)

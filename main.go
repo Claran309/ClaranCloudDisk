@@ -8,6 +8,7 @@ import (
 	"ClaranCloudDisk/middleware"
 	"ClaranCloudDisk/service"
 	"ClaranCloudDisk/util/jwt_util"
+	"ClaranCloudDisk/util/minIO"
 	"log"
 
 	"github.com/gin-gonic/gin"
@@ -20,6 +21,7 @@ func main() {
 	// MySQL
 	db, err := mysql.InitMysql(cfg)
 	if err != nil {
+		log.Println("初始化MySQL失败")
 		log.Fatal(err)
 	}
 	// Redis
@@ -33,6 +35,12 @@ func main() {
 	} else {
 		log.Println("Redis配置为空，跳过缓存初始化")
 	}
+	//minIO
+	minIOClient, err := minIO.NewMinIOClient(cfg.MinIO.MinIOEndpoint, cfg.MinIO.MinIORootName, cfg.MinIO.MinIOPassword, cfg.MinIO.MinIOBucketName, cfg.DefaultAvatarPath)
+	if err != nil {
+		log.Println("初始化minIO失败")
+		log.Fatal(err)
+	}
 
 	// dao
 	userRepo := mysql.NewMysqlUserRepo(db, redisClient.(*cache.RedisClient))
@@ -43,13 +51,13 @@ func main() {
 	// JWT工具
 	jwtUtil := jwt_util.NewJWTUtil(cfg)
 	// 业务逻辑层依赖
-	userService := services.NewUserService(userRepo, tokenRepo, jwtUtil, cfg.AvatarDIR)
-	fileService := services.NewUFileService(fileRepo, userRepo, cfg.CloudFileDir, cfg.MaxFileSize, cfg.NormalUserMaxStorage, cfg.LimitedSpeed)
+	userService := services.NewUserService(userRepo, tokenRepo, jwtUtil, cfg.AvatarDIR, minIOClient)
+	fileService := services.NewUFileService(fileRepo, userRepo, minIOClient, cfg.CloudFileDir, cfg.MaxFileSize, cfg.NormalUserMaxStorage, cfg.LimitedSpeed)
 	shareService := services.NewShareService(shareRepo, fileRepo, userRepo, cfg.CloudFileDir)
 	verificationService := services.NewVerificationService(verificationRepo, cfg.Email)
 	// 处理器层依赖
-	userHandler := handlers.NewUserHandler(userService, cfg.DefaultAvatarPath)
-	fileHandler := handlers.NewFileHandler(fileService)
+	userHandler := handlers.NewUserHandler(userService, cfg.DefaultAvatarPath, minIOClient)
+	fileHandler := handlers.NewFileHandler(fileService, minIOClient)
 	shareHandler := handlers.NewShareHandler(shareService)
 	verificationHandler := handlers.NewVerificationHandler(verificationService)
 	//创建中间件

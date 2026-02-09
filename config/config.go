@@ -23,6 +23,13 @@ type RedisConfig struct {
 	DB       int
 }
 
+type MinIOConfig struct {
+	MinIORootName   string
+	MinIOPassword   string
+	MinIOEndpoint   string
+	MinIOBucketName string
+}
+
 type Config struct {
 	// jwt
 	JWTSecret      string
@@ -42,6 +49,9 @@ type Config struct {
 
 	//redis
 	Redis RedisConfig
+
+	//minIO
+	MinIO MinIOConfig
 
 	//Email
 	Email EmailConfig
@@ -67,6 +77,12 @@ func LoadConfig() *Config {
 			Addr:     getEnv("REDIS_ADDR", "127.0.0.1:6379"),
 			Password: getEnv("REDIS_PASSWORD", ""),
 			DB:       getEnvInt("REDIS_DB", 0),
+		},
+		MinIO: MinIOConfig{
+			MinIORootName:   getEnv("MINIO_ROOT_NAME", "minioadmin"),
+			MinIOPassword:   getEnv("MINIO_PASSWORD", "YourStrongPassword123!"),
+			MinIOEndpoint:   getEnv("MINIO_ENDPOINT", "localhost:9000"),
+			MinIOBucketName: getEnv("MINIO_BUCKET_NAME", "bucket1"),
 		},
 		Email: EmailConfig{
 			SMTPHost:  getEnv("SMTP_HOST", ""),

@@ -3,6 +3,7 @@ package services
 import (
 	"ClaranCloudDisk/dao/mysql"
 	"ClaranCloudDisk/model"
+	"ClaranCloudDisk/util/minIO"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -19,16 +20,18 @@ import (
 type FileService struct {
 	FileRepo             mysql.FileRepository
 	UserRepo             mysql.UserRepository
+	minioClient          *minIO.MinIOClient
 	uploadDir            string
 	MaxFileSize          int64
 	NormalUserMaxStorage int64
 	LimitedSpeed         int64
 }
 
-func NewUFileService(fileRepo mysql.FileRepository, userRepo mysql.UserRepository, uploadDir string, maxFileSize int64, NormalUserMaxStorage int64, LimitedSpeed int64) *FileService {
+func NewUFileService(fileRepo mysql.FileRepository, userRepo mysql.UserRepository, minioClient *minIO.MinIOClient, uploadDir string, maxFileSize int64, NormalUserMaxStorage int64, LimitedSpeed int64) *FileService {
 	return &FileService{
 		FileRepo:             fileRepo,
 		UserRepo:             userRepo,
+		minioClient:          minioClient,
 		uploadDir:            uploadDir,
 		MaxFileSize:          maxFileSize * 1073741824, // GB -> 字节
 		NormalUserMaxStorage: NormalUserMaxStorage * 1073741824,
@@ -121,7 +124,13 @@ func (s *FileService) Upload(ctx context.Context, userID int, file multipart.Fil
 	}
 	if err := s.FileRepo.Create(ctx, newFile); err != nil {
 		// 回滚
-		os.Remove(filePath)
+		errEx := s.minioClient.Delete(ctx, filePath)
+		if errEx != nil {
+			fmt.Printf("回滚数据失败: %v\n", errEx)
+		}
+		//=============================================================================================================
+		//os.Remove(filePath)
+		//=============================================================================================================
 		return nil, fmt.Errorf("创建文件记录失败: %v", err)
 	}
 
@@ -152,9 +161,17 @@ func (s *FileService) Download(ctx context.Context, userID int, fileID int64) (*
 	}
 
 	//检查是否存在
-	if _, err := os.Stat(file.Path); os.IsNotExist(err) {
+	exist, err := s.minioClient.Exists(ctx, file.Path)
+	if err != nil || !exist {
 		return nil, -1, fmt.Errorf("文件已丢失")
 	}
+
+	//=============================================================================================================
+	//检查是否存在
+	//if _, err := os.Stat(file.Path); os.IsNotExist(err) {
+	//	return nil, -1, fmt.Errorf("文件已丢失")
+	//}
+	//=============================================================================================================
 
 	return file, LimitedSpeed, nil
 }
@@ -252,11 +269,16 @@ func (s *FileService) DeleteFile(ctx context.Context, userID int, fileID int64) 
 		return fmt.Errorf("无权删除此文件")
 	}
 
+	if err := s.minioClient.Delete(ctx, file.Path); err != nil {
+		return err
+	}
+
 	//删除
 	if err := s.FileRepo.Delete(ctx, uint(fileID)); err != nil {
 		return fmt.Errorf("删除文件失败: %v", err)
 	}
 
+	//更新存储空间
 	s.UpdateUserStorage(ctx, uint(userID), -file.Size)
 
 	return nil
@@ -314,23 +336,35 @@ func (s *FileService) CreateName(name string, userID uint) string {
 }
 
 func (s *FileService) Save(file multipart.File, filePath string) error {
-	//创建目录
-	dir := filepath.Dir(filePath)
-	//0755 : 0-无特殊权限  7-rwx  5-rx  5-rx
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return err
-	}
-
-	//创建文件
-	dst, err := os.Create(filePath)
+	fileData, err := io.ReadAll(file)
 	if err != nil {
+		return errors.New("读取文件失败")
+	}
+	ext := filepath.Ext(filePath)
+	if err := s.minioClient.Save(context.Background(), filePath, fileData, ext); err != nil {
 		return err
 	}
-	defer dst.Close()
 
-	//复制文件内容
-	_, err = io.Copy(dst, file)
-	return err
+	return nil
+	// =============================================================================================================
+	////创建目录
+	//dir := filepath.Dir(filePath)
+	////0755 : 0-无特殊权限  7-rwx  5-rx  5-rx
+	//if err := os.MkdirAll(dir, 0755); err != nil {
+	//	return err
+	//}
+	//
+	////创建文件
+	//dst, err := os.Create(filePath)
+	//if err != nil {
+	//	return err
+	//}
+	//defer dst.Close()
+	//
+	////复制文件内容
+	//_, err = io.Copy(dst, file)
+	//return err
+	//=============================================================================================================
 }
 
 func (s *FileService) UpdateUserStorage(ctx context.Context, userID uint, sizeDelta int64) {
@@ -513,6 +547,7 @@ func (s *FileService) MergeAllChunks(userID int, fileHash string, fileName strin
 func (s *FileService) MergeChunks(userID int, fileHash string, filename string, chunks []int) (string, int64, error) {
 	fileName := s.CreateName(filename, uint(userID))
 	filePath := filepath.Join(s.uploadDir, fmt.Sprintf("user_%d", uint(userID)), fileName)
+	ext := filepath.Ext(filePath)
 	//创建目录
 	dir := filepath.Dir(filePath)
 	//0755 : 0-无特殊权限  7-rwx  5-rx  5-rx
@@ -550,6 +585,23 @@ func (s *FileService) MergeChunks(userID int, fileHash string, filename string, 
 		//删除当前临时chunk
 		os.Remove(chunkPath)
 	}
+
+	//合并后把file存入minIO
+	//删除临时文件夹
+	//获取字节数据
+	finalFileData, err := io.ReadAll(finalFile)
+	if err != nil {
+		return "", -1, errors.New("读取合并文件失败")
+	}
+
+	//保存到minIO
+	if err := s.minioClient.Save(context.Background(), filePath, finalFileData, ext); err != nil {
+		return "", -1, err
+	}
+
+	//删除本地文件
+	os.Remove(filePath)
+	os.Remove(tmpPath)
 
 	return filePath, totalSize, nil
 }
