@@ -795,10 +795,10 @@ Content-Transfer-Encoding: binary
 - 401: 令牌无效
 - 500: 服务器内部错误
 
-### 5. 删除文件
-删除指定ID的文件。
+### 5. 直接删除文件
+硬删除指定ID的文件。
 
-- **URL**: `/file/{id}`
+- **URL**: `/file/{id}/delete/tough`
 - **方法**: `DELETE`
 - **认证**: 需要 Bearer Token
 - **Content-Type**: 无
@@ -1282,9 +1282,6 @@ Content-Range: bytes 0-1023/102400  # 仅在使用Range请求时包含
 
 以下是新增文件搜索接口的API文档说明：
 
----
-
-## 文件管理模块
 
 ### 13. 搜索文件
 在当前用户旗下的文件中进行搜索。
@@ -1395,9 +1392,7 @@ Content-Range: bytes 0-1023/102400  # 仅在使用Range请求时包含
 
 以下是新增分片上传和断点续传相关接口的API文档说明：
 
----
 
-## 文件管理模块
 
 ### 14. 分片上传文件
 通过分片的方式上传大文件，支持断点续传。
@@ -1543,6 +1538,191 @@ Authorization: Bearer your_token
     - 中间分片：逐个上传
     - 最后一个分片：服务器合并所有分片
 5. **完成上传**: 收到文件上传成功的响应
+
+以下是新增回收站（软删除）相关接口的API文档说明：
+
+---
+
+## 文件管理模块
+
+### 16. 软删除文件
+将指定文件放入回收站（软删除），而不是永久删除。
+
+- **URL**: `/file/{id}/delete/soft`
+- **方法**: `PUT`
+- **认证**: 需要 Bearer Token
+- **Content-Type**: 无
+
+**请求头**:
+
+| 请求头 | 值 | 说明 |
+|--------|----|------|
+| Authorization | Bearer {token} | 访问令牌 |
+
+**路径参数**:
+
+| 参数名 | 类型 | 必填 | 说明 | 示例 |
+|--------|------|------|------|------|
+| id | integer | 是 | 文件ID | 1 |
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "软删除成功",
+  "data": {
+    "file_id": 1,
+    "is_deleted": true
+  }
+}
+```
+
+**响应字段说明**:
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| file_id | integer | 被软删除的文件ID |
+| is_deleted | boolean | 文件是否被删除（软删除）状态，true表示已删除 |
+
+**错误码**:
+- 400: 无效的文件ID或软删除失败
+- 401: 令牌无效
+- 403: 无权限操作该文件
+- 404: 文件不存在
+- 500: 服务器内部错误
+
+### 17. 恢复文件
+从回收站中恢复被软删除的文件。
+
+- **URL**: `/file/{id}/delete/recovery`
+- **方法**: `PUT`
+- **认证**: 需要 Bearer Token
+- **Content-Type**: 无
+
+**请求头**:
+
+| 请求头 | 值 | 说明 |
+|--------|----|------|
+| Authorization | Bearer {token} | 访问令牌 |
+
+**路径参数**:
+
+| 参数名 | 类型 | 必填 | 说明 | 示例 |
+|--------|------|------|------|------|
+| id | integer | 是 | 文件ID | 1 |
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "恢复文件成功",
+  "data": {
+    "file_id": 1,
+    "is_deleted": false
+  }
+}
+```
+
+**响应字段说明**:
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| file_id | integer | 被恢复的文件ID |
+| is_deleted | boolean | 文件是否被删除（软删除）状态，false表示已恢复 |
+
+**错误码**:
+- 400: 无效的文件ID或恢复失败
+- 401: 令牌无效
+- 403: 无权限操作该文件
+- 404: 文件不存在
+- 500: 服务器内部错误
+
+### 18. 获取回收站文件列表
+获取当前用户的回收站（软删除）文件列表。
+
+- **URL**: `/file/bin`
+- **方法**: `GET`
+- **认证**: 需要 Bearer Token
+- **Content-Type**: 无
+
+**请求头**:
+
+| 请求头 | 值 | 说明 |
+|--------|----|------|
+| Authorization | Bearer {token} | 访问令牌 |
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "获取成功",
+  "data": {
+    "files": [
+      {
+        "id": 1,
+        "user_id": 1,
+        "name": "example.txt",
+        "filename": "example_12345.txt",
+        "path": "/uploads/example.txt",
+        "size": 1024,
+        "hash": "a1b2c3d4e5f6",
+        "mime_type": "text/plain",
+        "ext": "txt",
+        "is_starred": false,
+        "is_deleted": true,
+        "is_dir": false,
+        "parent_id": null,
+        "is_shared": false,
+        "created_at": "2023-10-01T12:00:00Z"
+      },
+      {
+        "id": 2,
+        "user_id": 1,
+        "name": "image.jpg",
+        "filename": "image_12345.jpg",
+        "path": "/uploads/image.jpg",
+        "size": 204800,
+        "hash": "g7h8i9j0k1l2",
+        "mime_type": "image/jpeg",
+        "ext": "jpg",
+        "is_starred": true,
+        "is_deleted": true,
+        "is_dir": false,
+        "parent_id": null,
+        "is_shared": false,
+        "created_at": "2023-10-01T12:30:00Z"
+      }
+    ],
+    "total": 2
+  }
+}
+```
+
+**响应字段说明**:
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| files[].id | integer | 文件ID |
+| files[].user_id | integer | 文件所有者ID |
+| files[].name | string | 原始文件名 |
+| files[].filename | string | 存储文件名 |
+| files[].path | string | 文件存储路径 |
+| files[].size | integer | 文件大小（字节） |
+| files[].hash | string | 文件哈希值（用于秒传） |
+| files[].mime_type | string | 文件MIME类型 |
+| files[].ext | string | 文件扩展名 |
+| files[].is_starred | boolean | 是否被收藏 |
+| files[].is_deleted | boolean | 是否被软删除（true表示在回收站中） |
+| files[].is_dir | boolean | 是否是文件夹 |
+| files[].parent_id | integer/null | 父文件夹ID，顶层文件为null |
+| files[].is_shared | boolean | 是否已分享 |
+| files[].created_at | string | 文件创建时间 |
+| total | integer | 回收站中的文件总数 |
+
+**错误码**:
+- 401: 令牌无效
+- 500: 获取回收站列表失败
+
 
 ---
 

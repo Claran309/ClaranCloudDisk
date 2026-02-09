@@ -739,3 +739,64 @@ func (h *FileHandler) SearchFile(c *gin.Context) {
 		"total": total,
 	}, "搜索成功")
 }
+
+func (h *FileHandler) SoftDelete(c *gin.Context) {
+	// 捕获数据
+	userID := c.GetInt("user_id")
+	fileID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		util.Error(c, 400, err.Error())
+	}
+
+	//服务层
+	err = h.fileService.SoftDelete(userID, int(fileID))
+	if err != nil {
+		util.Error(c, 400, err.Error())
+	}
+
+	//成功响应
+	util.Success(c, gin.H{
+		"file_id":    fileID,
+		"is_deleted": true,
+	}, "软删除成功")
+}
+
+func (h *FileHandler) RecoverFile(c *gin.Context) {
+	// 捕获数据
+	userID := c.GetInt("user_id")
+	fileID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		util.Error(c, 400, err.Error())
+	}
+
+	//服务层
+	err = h.fileService.RecoverFile(userID, int(fileID))
+	if err != nil {
+		util.Error(c, 400, err.Error())
+	}
+
+	//成功响应
+	util.Success(c, gin.H{
+		"file_id":    fileID,
+		"is_deleted": false,
+	}, "恢复文件成功")
+}
+
+func (h *FileHandler) GetBinList(c *gin.Context) {
+	//捕获数据
+	userID := c.GetInt("user_id")
+
+	//调用服务层
+	ctx := c.Request.Context()
+	files, total, err := h.fileService.GetBinList(ctx, userID)
+	if err != nil {
+		util.Error(c, 500, "获取文件列表失败: "+err.Error())
+		return
+	}
+
+	//范湖响应
+	util.Success(c, gin.H{
+		"files": files,
+		"total": total,
+	}, "获取成功")
+}

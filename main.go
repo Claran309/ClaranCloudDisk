@@ -82,7 +82,10 @@ func main() {
 	file.GET("/:id/download", fileHandler.Download)              // 下载文件
 	file.GET("/:id", fileHandler.GetFileInfo)                    // 获取文件详细信息
 	file.GET("/list", fileHandler.GetFileList)                   // 获取文件列表
-	file.DELETE("/:id", fileHandler.Delete)                      // 删除文件
+	file.PUT("/:id/delete/soft", fileHandler.SoftDelete)         // 软删除文件(将文件放入回收站)
+	file.PUT("/:id/delete/recovery", fileHandler.RecoverFile)    // 恢复文件
+	file.DELETE("/:id/delete/tough", fileHandler.Delete)         // 直接删除文件
+	file.GET("/bin", fileHandler.GetBinList)                     // 获取回收站文件列表
 	file.PUT("/:id/rename", fileHandler.Rename)                  // 重命名文件
 	file.GET("/:id/preview", fileHandler.Preview)                // 预览文件
 	file.GET("/:id/content", fileHandler.GetContent)             // 获取文件内容

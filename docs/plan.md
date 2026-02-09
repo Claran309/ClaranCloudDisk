@@ -43,7 +43,14 @@
     - [x] 分片上传
     - [x] 断点传续
     - [ ] 回收站
-    - [ ] 集成MinIO
+    - 集成MinIO
+      - [ ] Docker镜像
+      - [ ] 新增util_storage
+      - [ ] 重构file_service
+      - [ ] 分片合并后的file -> minIO
+      - [ ] 头像
+      - [ ] Download流式传输
+      - [ ] 环境变量配置
   - 分享模块
     - [x] 加密链接
     - [x] 批量分享
@@ -53,5 +60,5 @@
 - [ ] Docker-compose
 - [ ] Dockerhub
 - [ ] XSS,SQL注入,CSRF
-- [ ] start.sh
+- [ ] 测试代码（AI写）
 - [ ] vibe 前端

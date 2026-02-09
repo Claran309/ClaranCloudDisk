@@ -370,6 +370,7 @@ func (s *UserService) UploadAvatar(file *multipart.FileHeader, userID int, userN
 	}
 
 	// 构建访问URL
+	// 因为这个URL是新上传的头像，所以不管之前有没有上传过头像都没关系
 	avatarURL := fmt.Sprintf(s.AvatarDIR, "/user_%d/%s", userID, fileName)
 
 	// 将访问URL保存到数据层

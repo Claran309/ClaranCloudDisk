@@ -17,6 +17,7 @@ type File struct {
 	MimeType  string `gorm:"size:100" json:"mime_type"`         // 文件类型
 	Ext       string `gorm:"size:10" json:"ext"`                // 文件拓展名
 	IsStarred bool   `gorm:"default:false" json:"is_starred"`   // 是否被收藏
+	IsDeleted bool   `gorm:"default:false" json:"is_deleted"`   // 是否被软删除
 
 	// 文件元数据
 	IsDir    bool  `gorm:"default:false;index" json:"is_dir"` // 是否是文件夹

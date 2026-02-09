@@ -557,3 +557,58 @@ func (s *FileService) MergeChunks(userID int, fileHash string, filename string, 
 func (s *FileService) GetUploadedChunks(fileHash string) ([]int, error) {
 	return s.FileRepo.GetUploadedChunks(fileHash)
 }
+
+func (s *FileService) SoftDelete(userID, fileID int) error {
+	//获取文件信息
+	file, err := s.FileRepo.FindByID(context.Background(), uint(fileID))
+	if err != nil {
+		return fmt.Errorf("获取文件信息失败: %v", err)
+	}
+	//鉴权
+	if uint(userID) != file.UserID {
+		return fmt.Errorf("无权访问该文件")
+	}
+
+	file.IsDeleted = true
+
+	//访问数据层
+	err = s.FileRepo.Update(context.Background(), file)
+	if err != nil {
+		return fmt.Errorf("更新文件信息失败: %v", err)
+	}
+
+	return nil
+}
+
+func (s *FileService) RecoverFile(userID, fileID int) error {
+	//获取文件信息
+	file, err := s.FileRepo.FindByID(context.Background(), uint(fileID))
+	if err != nil {
+		return fmt.Errorf("获取文件信息失败: %v", err)
+	}
+	//鉴权
+	if uint(userID) != file.UserID {
+		return fmt.Errorf("无权访问该文件")
+	}
+
+	file.IsDeleted = false
+
+	//访问数据层
+	err = s.FileRepo.Update(context.Background(), file)
+	if err != nil {
+		return fmt.Errorf("更新文件信息失败: %v", err)
+	}
+
+	return nil
+}
+
+func (s *FileService) GetBinList(ctx context.Context, userID int) ([]*model.File, int, error) {
+	files, total, err := s.FileRepo.FindByUserID(ctx, uint(userID))
+	var finalFiles []*model.File
+	for _, file := range files {
+		if file.IsDeleted {
+			finalFiles = append(finalFiles, file)
+		}
+	}
+	return finalFiles, int(total), err
+}
