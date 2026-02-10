@@ -1,0 +1,51 @@
+#===============================应用配置=================================
+app:
+  name: ${APP_NAME}
+  env: ${APP_ENV}
+
+  http:
+    host: ${APP_HOST}
+    port: ${APP_PORT}
+
+  file:
+    cloud_file_dir: ${CLOUD_FILE_DIR}
+    avatar_dir: ${AVATAR_DIR}
+    default_avatar_dir: ${DEFAULT_AVATAR_PATH}
+    max_file_size: ${MAX_FILE_SIZE}
+    normal_user_max_storage: ${NORMAL_USER_MAX_STORAGE}
+    limited_speed: ${LIMITED_SPEED}
+
+jwt:
+  secret_key: ${SECRET_KEY}
+  issuer: ${ISSUER}
+  exp_time_hours: ${EXP_TIME_HOURS}
+
+#===============================数据库配置===============================
+database:
+  mysql:
+    root_password: ${MYSQL_ROOT_PASSWORD}
+    database: ${MYSQL_DATABASE}
+    user: ${MYSQL_USER}
+    password: ${MYSQL_PASSWORD}
+    dsn: ${DB_DSN}
+
+  redis:
+    addr: ${REDIS_ADDR}
+    password: ${REDIS_PASSWORD}
+    db: ${REDIS_DB}
+
+#===============================存储配置================================
+minIO:
+  root_user: ${MINIO_ROOT_USER}
+  password: ${MINIO_ROOT_PASSWORD}
+  endpoint: ${MINIO_ENDPOINT}
+  bucket_name: ${MINIO_BUCKET_NAME}
+
+#===============================服务器邮箱配置===========================
+email:
+  SMTP_host: ${SMTP_HOST}
+  SMTP_port: ${SMTP_PORT}
+  SMTP_user: ${SMTP_USER}
+  SMTP_pass: ${SMTP_PASS}
+  from_name: ${FROM_NAME}
+  from_email: ${FROM_EMAIL}

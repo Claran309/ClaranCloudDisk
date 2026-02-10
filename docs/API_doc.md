@@ -2172,231 +2172,179 @@ Content-Type: application/json
 
 ## 配置管理
 
-系统使用环境变量进行配置管理，通过 `.env` 文件加载配置信息。配置文件位于项目的 `config` 包中。
+系统使用YAML配置文件进行配置管理，支持环境变量插值，并提供热重载功能。配置文件位于项目的 `config` 目录中。
 
 ### 配置文件结构
 
-```go
-// config.go 主配置文件
-package config
+#### 主配置文件 (config.yaml)
+采用YAML格式的结构化配置文件，支持环境变量插值：
 
-import (
-    "log"
-    "os"
-    "strconv"
-    "github.com/joho/godotenv"
-)
+```yaml
+#===============================应用配置=================================
+app:
+  name: ${APP_NAME}
+  env: ${APP_ENV}
 
-// Config 系统总配置结构体
-type Config struct {
-    // JWT 配置
-    JWTSecret      string
-    JWTIssuer      string
-    JWTExpireHours int
-    
-    // 文件配置
-    CloudFileDir         string
-    AvatarDIR            string
-    DefaultAvatarPath    string
-    MaxFileSize          int64  // 单个文件大小限制 (GB)
-    NormalUserMaxStorage int64  // 非VIP用户存储空间限制 (GB)
-    LimitedSpeed         int64  // 非VIP用户下载速度限额 (MB)
-    
-    // 数据库配置
-    DSN string
-    
-    // Redis 配置
-    Redis RedisConfig
-    
-    // MinIO 配置
-    MinIO MinIOConfig
-    
-    // 邮箱配置
-    Email EmailConfig
-}
+  http:
+    host: ${APP_HOST}
+    port: ${APP_PORT}
+
+  file:
+    cloud_file_dir: ${CLOUD_FILE_DIR}
+    avatar_dir: ${AVATAR_DIR}
+    default_avatar_dir: ${DEFAULT_AVATAR_PATH}
+    max_file_size: ${MAX_FILE_SIZE}
+    normal_user_max_storage: ${NORMAL_USER_MAX_STORAGE}
+    limited_speed: ${LIMITED_SPEED}
+
+jwt:
+  secret_key: ${SECRET_KEY}
+  issuer: ${ISSUER}
+  exp_time_hours: ${EXP_TIME_HOURS}
+
+#===============================数据库配置===============================
+database:
+  mysql:
+    root_password: ${MYSQL_ROOT_PASSWORD}
+    database: ${MYSQL_DATABASE}
+    user: ${MYSQL_USER}
+    password: ${MYSQL_PASSWORD}
+    dsn: ${DB_DSN}
+
+  redis:
+    addr: ${REDIS_ADDR}
+    password: ${REDIS_PASSWORD}
+    db: ${REDIS_DB}
+
+#===============================存储配置================================
+minIO:
+  root_user: ${MINIO_ROOT_USER}
+  password: ${MINIO_ROOT_PASSWORD}
+  endpoint: ${MINIO_ENDPOINT}
+  bucket_name: ${MINIO_BUCKET_NAME}
+
+#===============================服务器邮箱配置===========================
+email:
+  SMTP_host: ${SMTP_HOST}
+  SMTP_port: ${SMTP_PORT}
+  SMTP_user: ${SMTP_USER}
+  SMTP_pass: ${SMTP_PASS}
+  from_name: ${FROM_NAME}
+  from_email: ${FROM_EMAIL}
 ```
+
+#### 环境变量文件 (.env)
+用于定义配置文件中的环境变量占位符：
+
+```env
+# 应用配置
+APP_NAME=                     # 应用名称
+APP_HOST=                     # 服务器地址
+APP_PORT=                     # 监听端口
+APP_ENV=                      # 应用环境
+CLOUD_FILE_DIR=               # 服务器云盘文件存储桶桶名
+AVATAR_DIR=                   # 用户头像存储桶桶名
+DEFAULT_AVATAR_PATH=          # 平台默认头像路径
+MAX_FILE_SIZE=                # 单个文件最大大小 (GB)
+NORMAL_USER_MAX_STORAGE=      # 非VIP用户储存限额 (GB)
+LIMITED_SPEED=                # 非VIP用户下载速度限额 为0则不限速 (MB)
+
+# JWT 配置
+JWT_SECRET_KEY=               # JET密钥
+ISSUER=                       # 签发者
+EXP_TIME_HOURS=               # token过期时间
+
+# MySQL 配置
+MYSQL_ROOT_PASSWORD=          # ROOT密码
+MYSQL_DATABASE=               # 数据库表
+MYSQL_USER=                   # 用户名
+MYSQL_PASSWORD=               # 密码
+DB_DSN=                       # DSN
+
+# Redis 配置
+REDIS_ADDR=                   # Redis地址
+REDIS_PASSWORD=               # Redis密码
+REDIS_DB=                     # RedisDBID
+
+# minIO配置
+MINIO_ROOT_USER=              # minIO管理员用户名
+MINIO_ROOT_PASSWORD=          # minIO管理员密码 (应为大于八位的强密码)
+MINIO_ENDPOINT=               # minIO服务器地址
+MINIO_BUCKET_NAME=            # minIO默认存储桶名称
+
+# 邮箱验证码功能配置
+SMTP_HOST=                    # SMTP服务器地址
+SMTP_PORT=                    # SMTP服务器端口
+SMTP_USER=                    # 服务器邮箱名称
+SMTP_PASS=                    # 服务器专属授权码
+FROM_NAME=                    # 服务器发件人显示名称
+FROM_EMAIL=                   # 服务器邮箱地址
+```
+
+### 配置加载机制
+
+1. Viper配置加载
+    - 使用Viper库进行配置管理，支持YAML格式和环境变量插值：
+
+2. 配置热重载
+    - 系统支持配置文件的热重载，可以在运行时更新配置而无需重启服务：
 
 ### 配置项说明
 
-#### JWT 配置
-用于 JWT 令牌的生成和验证：
+#### 应用配置
+| 配置项 | 类型 | 必填 | 默认值 | 说明 |
+|--------|------|------|--------|------|
+| app.name | string | 是 | 无 | 应用名称 |
+| app.env | string | 是 | "development" | 应用环境 |
+| app.http.host | string | 是 | "localhost" | 服务器地址 |
+| app.http.port | int | 是 | 8080 | 监听端口 |
+| app.file.cloud_file_dir | string | 是 | "/data/clouddisk/files" | 云盘文件存储路径 |
+| app.file.avatar_dir | string | 是 | "/data/clouddisk/avatars" | 用户头像存储路径 |
+| app.file.default_avatar_dir | string | 是 | "/data/clouddisk/avatars/default.png" | 默认头像路径 |
+| app.file.max_file_size | int | 是 | 25 | 单个文件最大大小（GB） |
+| app.file.normal_user_max_storage | int | 是 | 100 | 非VIP用户存储限额（GB） |
+| app.file.limited_speed | int | 是 | 10 | 非VIP用户下载速度限额（MB/s），0为不限速 |
 
-| 环境变量 | 类型 | 必填 | 默认值 | 说明 |
-|---------|------|------|--------|------|
-| JWT_SECRET_KEY | string | 是 | 无 | JWT 密钥，用于签名令牌 |
-| JWT_ISSUER | string | 是 | 无 | JWT 签发者标识 |
-| JWT_EXPIRATION_HOURS | int | 否 | 24 | 令牌过期时间（小时） |
+#### JWT配置
+| 配置项 | 类型 | 必填 | 默认值 | 说明 |
+|--------|------|------|--------|------|
+| jwt.secret_key | string | 是 | 无 | JWT密钥，用于签名令牌 |
+| jwt.issuer | string | 是 | 无 | JWT签发者标识 |
+| jwt.exp_time_hours | int | 是 | 24 | 令牌过期时间（小时） |
 
-#### 文件存储配置
-控制文件上传、存储和下载行为：
+#### MySQL数据库配置
+| 配置项 | 类型 | 必填 | 默认值 | 说明 |
+|--------|------|------|--------|------|
+| database.mysql.root_password | string | 是 | 无 | MySQL ROOT密码 |
+| database.mysql.database | string | 是 | 无 | 数据库名称 |
+| database.mysql.user | string | 是 | 无 | 数据库用户名 |
+| database.mysql.password | string | 是 | 无 | 数据库密码 |
+| database.mysql.dsn | string | 是 | 无 | 数据库连接字符串 |
 
-| 环境变量 | 类型 | 必填 | 默认值 | 说明 |
-|---------|------|------|--------|------|
-| CLOUD_FILE_DIR | string | 是 | "D:\\" | 服务器云盘文件存储路径 |
-| AVATAR_DIR | string | 是 | "D:\\" | 用户头像存储路径 |
-| DEFAULT_AVATAR_PATH | string | 是 | "D:\\" | 平台默认头像路径 |
-| MAX_FILE_SIZE | int | 否 | 25 | 单个文件最大大小（GB） |
-| NORMAL_USER_MAX_STORAGE | int | 否 | 100 | 非VIP用户存储限额（GB） |
-| LIMITED_SPEED | int | 否 | 10 | 非VIP用户下载速度限额（MB/s），0为不限速 |
+#### Redis缓存配置
+| 配置项 | 类型 | 必填 | 默认值 | 说明 |
+|--------|------|------|--------|------|
+| database.redis.addr | string | 是 | "127.0.0.1:6379" | Redis服务器地址 |
+| database.redis.password | string | 否 | 空 | Redis密码 |
+| database.redis.db | int | 是 | 0 | Redis数据库编号 |
 
-#### MySQL 数据库配置
-数据库连接配置：
-
-| 环境变量 | 类型 | 必填 | 默认值 | 说明 |
-|---------|------|------|--------|------|
-| DB_DSN | string | 是 | 无 | 数据库连接字符串 |
-| MYSQL_ROOT_PASSWORD | string | 否 | 无 | MySQL ROOT密码 |
-| MYSQL_DATABASE | string | 否 | 无 | 数据库名称 |
-| MYSQL_USER | string | 否 | 无 | 数据库用户名 |
-| MYSQL_PASSWORD | string | 否 | 无 | 数据库密码 |
-
-#### Redis 缓存配置
-Redis 缓存服务配置：
-
-| 环境变量 | 类型 | 必填 | 默认值 | 说明 |
-|---------|------|------|--------|------|
-| REDIS_ADDR | string | 否 | "127.0.0.1:6379" | Redis 服务器地址 |
-| REDIS_PASSWORD | string | 否 | 空 | Redis 密码 |
-| REDIS_DB | int | 否 | 0 | Redis 数据库编号 |
-
-#### MinIO 对象存储配置
-MinIO 对象存储服务配置：
-
-| 环境变量 | 类型 | 必填 | 默认值 | 说明 |
-|---------|------|------|--------|------|
-| MINIO_ROOT_NAME | string | 否 | "minioadmin" | MinIO 管理员用户名 |
-| MINIO_PASSWORD | string | 否 | "YourStrongPassword123!" | MinIO 管理员密码 |
-| MINIO_ENDPOINT | string | 否 | "localhost:9000" | MinIO 服务器地址 |
-| MINIO_BUCKET_NAME | string | 否 | "bucket1" | MinIO 默认存储桶名称 |
+#### MinIO对象存储配置
+| 配置项 | 类型 | 必填 | 默认值 | 说明 |
+|--------|------|------|--------|------|
+| minio.root_user | string | 是 | "minioadmin" | MinIO管理员用户名 |
+| minio.password | string | 是 | 无 | MinIO管理员密码 |
+| minio.endpoint | string | 是 | "localhost:9000" | MinIO服务器地址 |
+| minio.bucket_name | string | 是 | "bucket1" | MinIO默认存储桶名称 |
 
 #### 邮箱服务配置
-邮件发送服务配置（用于验证码发送）：
-
-| 环境变量 | 类型 | 必填 | 默认值 | 说明 |
-|---------|------|------|--------|------|
-| SMTP_HOST | string | 否 | 空 | SMTP 服务器地址 |
-| SMTP_PORT | int | 否 | 0 | SMTP 服务器端口 |
-| SMTP_USER | string | 否 | 空 | SMTP 服务器邮箱名称 |
-| SMTP_PASS | string | 否 | 空 | SMTP 服务器专属授权码 |
-| FROM_NAME | string | 否 | 空 | 发件人显示名称 |
-| FROM_EMAIL | string | 否 | 空 | 服务器邮箱地址 |
-
-#### 应用运行配置
-应用运行时的基本配置：
-
-| 环境变量 | 类型 | 必填 | 默认值 | 说明 |
-|---------|------|------|--------|------|
-| APP_PORT | string | 否 | 无 | 应用监听端口 |
-| APP_ENV | string | 否 | "production" | 应用环境（production/development） |
-| LOG_LEVEL | string | 否 | "info" | 日志级别 |
-
-### 配置加载函数
-
-系统使用以下辅助函数加载配置：
-
-```go
-// 加载 .env 文件并返回配置实例
-func LoadConfig() *Config {
-    err := godotenv.Load(".env")
-    if err != nil {
-        log.Fatal("error loading .env file")
-    }
-    return &Config{
-        // 各个配置项的初始化
-    }
-}
-
-// 获取字符串类型环境变量，支持默认值
-func getEnv(key, fallback string) string {
-    if value, ok := os.LookupEnv(key); ok {
-        return value
-    }
-    return fallback
-}
-
-// 获取整数类型环境变量，支持默认值
-func getEnvInt(key string, fallback int) int {
-    valueStr := getEnv(key, "")
-    if value, err := strconv.Atoi(valueStr); err == nil {
-        return value
-    }
-    return fallback
-}
-```
-
-### 环境文件示例
-
-`.env` 文件格式：
-
-```env
-# JWT 配置
-JWT_SECRET_KEY=your_jwt_secret_key_here
-JWT_ISSUER=claran-cloud-disk
-JWT_EXPIRATION_HOURS=24
-
-# MySQL 配置
-DB_DSN=root:password@tcp(127.0.0.1:3306)/clouddisk?charset=utf8mb4&parseTime=True&loc=Local
-
-# Redis 配置
-REDIS_ADDR=127.0.0.1:6379
-REDIS_PASSWORD=
-REDIS_DB=0
-
-# MinIO 配置
-MINIO_ROOT_NAME=minioadmin
-MINIO_PASSWORD=YourStrongPassword123!
-MINIO_ENDPOINT=localhost:9000
-MINIO_BUCKET_NAME=bucket1
-
-# 应用配置
-APP_PORT=8080
-APP_ENV=development
-LOG_LEVEL=info
-CLOUD_FILE_DIR=/data/clouddisk/files
-AVATAR_DIR=/data/clouddisk/avatars
-DEFAULT_AVATAR_PATH=/data/clouddisk/avatars/default.png
-MAX_FILE_SIZE=25
-NORMAL_USER_MAX_STORAGE=100
-LIMITED_SPEED=10
-
-# 邮箱配置
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your-email@gmail.com
-SMTP_PASS=your-app-password
-FROM_NAME=Claran Cloud Disk
-FROM_EMAIL=your-email@gmail.com
-```
-
-### 配置使用示例
-
-在应用中加载配置：
-
-```go
-// main.go
-package main
-
-import (
-    "ClaranCloudDisk/config"
-    "log"
-)
-
-func main() {
-    // 加载配置
-    cfg := config.LoadConfig()
-    
-    // 使用配置
-    log.Printf("应用运行在端口: %s", cfg.APP_PORT)
-    log.Printf("文件存储目录: %s", cfg.CloudFileDir)
-    log.Printf("JWT 密钥长度: %d", len(cfg.JWTSecret))
-    
-    // 初始化其他组件...
-}
-```
-
----
-
-
+| 配置项 | 类型 | 必填 | 默认值 | 说明 |
+|--------|------|------|--------|------|
+| email.SMTP_host | string | 是 | 无 | SMTP服务器地址 |
+| email.SMTP_port | int | 是 | 0 | SMTP服务器端口 |
+| email.SMTP_user | string | 是 | 无 | SMTP服务器邮箱名称 |
+| email.SMTP_pass | string | 是 | 无 | SMTP服务器专属授权码 |
+| email.from_name | string | 是 | 无 | 发件人显示名称 |
+| email.from_email | string | 是 | 无 | 服务器邮箱地址 |
 
 ---
 ## 模型说明
@@ -2660,3 +2608,15 @@ func main() {
 3. **安全性**: 使用bcrypt的默认成本因子，确保密码哈希的计算强度适中
 4. **防彩虹表**: 自动加盐处理，防止彩虹表攻击，确保相同密码的哈希值也不同
 5. **标准化**: 符合安全标准，避免自定义加密算法的安全风险
+
+### 配置管理
+
+系统采用Viper配置管理框架，支持YAML配置文件和环境变量扩展：
+
+1. YAML配置: 使用结构化的YAML格式管理所有系统配置，提高可读性和可维护性
+2. 环境变量扩展: 配置文件支持环境变量插值，方便不同环境部署
+3. 配置热重载: 监控配置文件变化，支持配置动态更新而无需重启服务
+4. 类型安全: 通过结构体映射配置，确保配置访问的类型安全
+5. 集中管理: 所有配置项统一存储在config.yaml文件中，便于管理和版本控制
+
+注意: 配置热重载会立即加载新配置，但某些配置需要重启服务才能完全生效

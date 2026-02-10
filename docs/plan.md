@@ -54,11 +54,11 @@
     - [x] 批量分享
 - [x] 编写api说明文档
 - [x] 项目说明文档
-- [ ] Viper
+- [x] Viper
 - [ ] Zap
-- [ ] Dockerfile
-- [ ] Docker-compose
-- [ ] Dockerhub
 - [ ] XSS,SQL注入,CSRF
 - [ ] 测试代码（AI写）
 - [ ] vibe 前端
+- [ ] Dockerfile
+- [ ] Docker-compose
+- [ ] Dockerhub
