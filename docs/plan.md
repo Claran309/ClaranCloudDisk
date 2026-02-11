@@ -56,11 +56,16 @@
 - [x] 项目说明文档
 - [x] Viper
 - [x] Zap
-- [ ] XSS,SQL注入,CSRF
+- 安全问题
+  - [x] XSS：上传或预览文本文件时可能触发，但是本项目将文本文件的上传一律设置为了`text/plain`，并且使用io.Copy流式传输，基本没有XSS风险
+  - [x] SQL注入：gorm内部会自动进行参数化处理，并且项目内基本使用了参数化查询，基本没有风险
+  - [ ] CSRF：应使用CSRF中间件并进行CSRF Token认证
+  - [ ] 恶意危险文件上传：集成ClamAV进行文件病毒扫描
+  - [x] 其他： 添加RateLimited中间件和Security中间件
+- [ ] corn job
+- [ ] 后台管理界面
 - [ ] 测试代码（AI写）
 - [ ] vibe 前端
 - [ ] Dockerfile
 - [ ] Docker-compose
 - [ ] Dockerhub
-- [ ] corn job
-- [ ] 后台管理界面

@@ -3,6 +3,7 @@ app:
   name: ${APP_NAME}
   env: ${APP_ENV}
   log_path: ${LOG_PATH}
+  max_requests_every_minute: ${MAX_REQUESTS_EVERY_MINUTE}
 
   http:
     host: ${APP_HOST}

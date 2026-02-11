@@ -36,8 +36,9 @@ type MinIOConfig struct {
 
 type Config struct {
 	// App
-	AppName string
-	LogPath string
+	AppName     string
+	LogPath     string
+	MaxRequests int
 
 	// jwt
 	JWTSecret      string
@@ -100,6 +101,7 @@ func InitConfigByViper() *Config {
 	return &Config{
 		AppName:              viper.GetString("app.name"),
 		LogPath:              viper.GetString("app.log_path"),
+		MaxRequests:          viper.GetInt("app.max_requests_every_minute"),
 		JWTSecret:            viper.GetString("jwt.secret_key"),
 		JWTIssuer:            viper.GetString("jwt.issuer"),
 		JWTExpireHours:       viper.GetInt("jwt.exp_time_hours"),
