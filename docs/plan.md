@@ -57,9 +57,9 @@
 - [x] Viper
 - [x] Zap
 - 安全问题
-  - [x] XSS：上传或预览文本文件时可能触发，但是本项目将文本文件的上传一律设置为了`text/plain`，并且使用io.Copy流式传输，基本没有XSS风险
+  - [x] XSS：上传或预览文本文件时可能触发，但是本项目将文本文件的上传一律设置为了`text/plain`，并且使用io.Copy流式传输，且启用了`"X-XSS-Protection"`XSS过滤，基本没有XSS风险
   - [x] SQL注入：gorm内部会自动进行参数化处理，并且项目内基本使用了参数化查询，基本没有风险
-  - [ ] CSRF：应使用CSRF中间件并进行CSRF Token认证
+  - [x] CSRF：正常来说应使用CSRF中间件并进行CSRF Token认证，但是本项目认证方式为通过请求头传递的jwt，不会被CSRF攻击
   - [ ] 恶意危险文件上传：集成ClamAV进行文件病毒扫描
   - [x] 其他： 添加RateLimited中间件和Security中间件
 - [ ] corn job
