@@ -2,6 +2,7 @@
 app:
   name: ${APP_NAME}
   env: ${APP_ENV}
+  log_path: ${LOG_PATH}
 
   http:
     host: ${APP_HOST}

@@ -5,32 +5,40 @@ import (
 	"ClaranCloudDisk/dao/cache"
 	"ClaranCloudDisk/dao/mysql"
 	"ClaranCloudDisk/handler"
+	"ClaranCloudDisk/log"
 	"ClaranCloudDisk/middleware"
 	"ClaranCloudDisk/service"
 	"ClaranCloudDisk/util/jwt_util"
 	"ClaranCloudDisk/util/minIO"
 	"fmt"
-	"log"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 func main() {
-	//=====================================配置管理===================================================
+	//=====================================初始化配置====================================================
 	//cfg := config.LoadConfig()
 	cfg := config.InitConfigByViper()
+	//=====================================初始化日志====================================================
+	log.InitLogManager(cfg.AppName, cfg.LogPath)
+
 	//配置监控
 	go config.WatchConfig()
-
-	//======================================初始化====================================================
+	//====================================初始化数据库===================================================
 	// 数据层依赖
 	// MySQL
+	zap.L().Info("开始初始化数据库",
+		zap.String("dsn", cfg.DSN))
 	db, err := mysql.InitMysql(cfg)
 	if err != nil {
-		log.Println("初始化MySQL失败")
-		log.Fatal(err)
+		zap.L().Error("初始化MySQL失败")
+		zap.L().Fatal(err.Error())
 	}
 	// Redis
+	zap.L().Info("开始初始化缓存",
+		zap.String("addr", cfg.Redis.Addr),
+		zap.Int("db", cfg.Redis.DB))
 	var redisClient cache.Cache
 	if cfg.Redis.Addr != "" {
 		redisClient = cache.NewRedisClient(
@@ -39,15 +47,21 @@ func main() {
 			cfg.Redis.DB,
 		)
 	} else {
-		log.Println("Redis配置为空，跳过缓存初始化")
+		zap.L().Warn("Redis配置为空，跳过缓存初始化")
 	}
 	//minIO
+	zap.L().Info("开始初始化minIO",
+		zap.String("root_name", cfg.MinIO.MinIORootName),
+		zap.String("endpoint", cfg.MinIO.MinIOEndpoint),
+		zap.String("bucket_name", cfg.MinIO.MinIOBucketName))
 	minIOClient, err := minIO.NewMinIOClient(cfg.MinIO.MinIOEndpoint, cfg.MinIO.MinIORootName, cfg.MinIO.MinIOPassword, cfg.MinIO.MinIOBucketName, cfg.DefaultAvatarPath)
 	if err != nil {
-		log.Println("初始化minIO失败")
-		log.Fatal(err)
+		zap.L().Error("初始化MinIO失败")
+		zap.L().Fatal(err.Error())
 	}
 
+	//=====================================初始化依赖===================================================
+	zap.L().Info("初始化依赖")
 	// dao
 	userRepo := mysql.NewMysqlUserRepo(db, redisClient.(*cache.RedisClient))
 	tokenRepo := mysql.NewMysqlTokenRepo(db, redisClient.(*cache.RedisClient))
@@ -71,7 +85,11 @@ func main() {
 
 	r := gin.Default()
 
-	//=======================================用户管理路由=============================================
+	//=======================================用户管理路由================================================
+	zap.L().Info("启动路由服务",
+		zap.String("service", "user-service"),
+		zap.String("host", cfg.Host),
+		zap.Int("port", cfg.Port))
 	user := r.Group("/user")
 	user.POST("/register", userHandler.Register)                                                                 // 注册
 	user.POST("/login", userHandler.Login)                                                                       // 登录
@@ -87,7 +105,11 @@ func main() {
 	user.POST("/get_verification_code", verificationHandler.GetVerificationCode)                                 // 获取邮箱验证码
 	user.POST("/verify_verification_code", verificationHandler.VerifyVerificationCode)                           // 验证邮箱验证码
 
-	//=======================================文件管理路由=============================================
+	//=======================================文件管理路由================================================
+	zap.L().Info("启动路由服务",
+		zap.String("service", "file-service"),
+		zap.String("host", cfg.Host),
+		zap.Int("port", cfg.Port))
 	file := r.Group("/file")
 	file.Use(jwtMiddleware.JWTAuthentication())
 	file.POST("/upload", fileHandler.Upload)                     // 上传文件
@@ -108,7 +130,11 @@ func main() {
 	file.POST("/:id/star", fileHandler.Star)                     // 收藏
 	file.POST("/:id/Unstar", fileHandler.Unstar)                 // 取消收藏
 	file.POST("/search", fileHandler.SearchFile)                 // 用户旗下的文件搜索
-	//=======================================分享管理路由=============================================
+	//=======================================分享管理路由===============================================
+	zap.L().Info("启动路由服务",
+		zap.String("service", "share-service"),
+		zap.String("host", cfg.Host),
+		zap.Int("port", cfg.Port))
 	//下载或转存全部文件 = 逐个下载share下的全部文件
 	share := r.Group("/share")
 	share.Use(jwtMiddleware.JWTAuthentication())
@@ -121,15 +147,16 @@ func main() {
 
 	err = r.Run(fmt.Sprintf(cfg.Host, ":", cfg.Port))
 	if err != nil {
-		panic("Failed to start Gin server: " + err.Error())
+		zap.S().Fatal("启动Gin服务失败: %v", err.Error())
 	}
 }
 
+/*
 func loadServe() {
-	//=====================================配置管理===================================================
+	//=====================================配置管理======================================================
 	//cfg := config.LoadConfig()
 	cfg := config.InitConfigByViper()
-	//======================================初始化====================================================
+	//======================================初始化======================================================
 	// 数据层依赖
 	// MySQL
 	db, err := mysql.InitMysql(cfg)
@@ -231,6 +258,7 @@ func loadServe() {
 		panic("Failed to start Gin server: " + err.Error())
 	}
 }
+*/
 
 /*
 API sum: 37

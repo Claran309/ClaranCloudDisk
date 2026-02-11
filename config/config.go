@@ -1,17 +1,15 @@
 package config
 
 import (
-	"log"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
 )
 
 type EmailConfig struct {
@@ -37,6 +35,10 @@ type MinIOConfig struct {
 }
 
 type Config struct {
+	// App
+	AppName string
+	LogPath string
+
 	// jwt
 	JWTSecret      string
 	JWTIssuer      string
@@ -76,7 +78,7 @@ func InitConfigByViper() *Config {
 	//读取config.yaml
 	configContent, err := os.ReadFile("./config/config.yaml")
 	if err != nil {
-		log.Fatal("os读取config.yaml失败: ", err)
+		zap.S().Fatalf("os读取config.yaml失败: %v", err)
 	}
 
 	//展开环境变量
@@ -84,11 +86,20 @@ func InitConfigByViper() *Config {
 
 	//提取config.yaml
 	if err := viper.ReadConfig(strings.NewReader(expandedContent)); err != nil {
-		log.Fatal("viper提取config.yaml失败: ", err)
+		zap.S().Fatalf("viper提取config.yaml失败: %v", err)
 	}
+
+	// 默认配置
+	viper.SetDefault("app.name", "ClaranCloudDisk")
+	viper.SetDefault("app.file.cloud_file_dir", "./CloudFiles")
+	viper.SetDefault("app.file.avatar_dir", "./Avatars")
+	viper.SetDefault("app.file.default_avatar_path", "./Avatars/DefaultAvatar/DefaultAvatar.png")
+	viper.SetDefault("app.log_path", "./log./logs")
 
 	//返回配置数据
 	return &Config{
+		AppName:              viper.GetString("app.name"),
+		LogPath:              viper.GetString("app.log_path"),
 		JWTSecret:            viper.GetString("jwt.secret_key"),
 		JWTIssuer:            viper.GetString("jwt.issuer"),
 		JWTExpireHours:       viper.GetInt("jwt.exp_time_hours"),
@@ -124,19 +135,20 @@ func InitConfigByViper() *Config {
 }
 
 func WatchConfig() {
+	zap.L().Info("开始监控配置文件")
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		log.Fatal("创建监控器失败: ", err)
+		zap.S().Fatalf("创建监控器失败: %v", err)
 		return
 	}
 	defer watcher.Close()
 
 	if err := watcher.Add("./config/config.yaml"); err != nil {
-		log.Fatal("监控文件失败: ", err)
+		zap.S().Fatalf("监控文件失败: %v", err)
 		return
 	}
 
-	log.Printf("监控配置文件中: ./config/config.yaml")
+	zap.L().Info("监控配置文件中: ./config/config.yaml")
 
 	//信号传递
 	signalChan := make(chan os.Signal, 1)
@@ -151,7 +163,7 @@ func WatchConfig() {
 			}
 
 			if event.Op&fsnotify.Write == fsnotify.Write {
-				log.Printf("检测到配置文件变化: %s", event.Name)
+				zap.S().Warnf("检测到配置文件变化: %s", event.Name)
 
 				time.Sleep(100 * time.Millisecond)
 
@@ -159,7 +171,7 @@ func WatchConfig() {
 				//读取config.yaml
 				configContent, err := os.ReadFile("./config/config.yaml")
 				if err != nil {
-					log.Fatal("os读取config.yaml失败: ", err)
+					zap.S().Fatalf("os读取config.yaml失败: %v", err)
 				}
 
 				//展开环境变量
@@ -167,37 +179,40 @@ func WatchConfig() {
 
 				//提取config.yaml
 				if err := viper.ReadConfig(strings.NewReader(expandedContent)); err != nil {
-					log.Fatal("viper提取config.yaml失败: ", err)
+					zap.S().Fatalf("viper提取config.yaml失败: %v", err)
 				}
 
-				log.Println("配置已热重载，请及时重启服务器")
+				zap.L().Warn("配置已热重载，请及时重启服务器")
 			}
 
 		case err, ok := <-watcher.Errors:
 			if !ok {
 				return
 			}
-			log.Println("监控出错: ", err)
+			zap.S().Errorf("监控出错:  %v", err)
 
 		case <-signalChan:
-			log.Println("停止监控")
+			zap.L().Info("停止监控")
 			return
 		}
 	}
 }
 
+/*
 func LoadConfig() *Config {
 	err := godotenv.Load(".env")
 	if err != nil {
 		log.Fatal("error loading .env file")
 	}
 	return &Config{
+		AppName:              getEnv("APP_NAME", "MyApp"),
+		LogPath:              getEnv("LOG_PATH", "./log./logs"),
 		JWTSecret:            getEnv("JWT_SECRET_KEY", ""),
 		JWTIssuer:            getEnv("JWT_ISSUER", ""),
 		JWTExpireHours:       getEnvInt("JWT_EXPIRATION_HOURS", 24),
-		CloudFileDir:         getEnv("CLOUD_FILE_DIR", "D:\\"),
-		AvatarDIR:            getEnv("AVATAR_DIR", "D:\\"),
-		DefaultAvatarPath:    getEnv("DEFAULT_AVATAR_PATH", "D:\\"),
+		CloudFileDir:         getEnv("CLOUD_FILE_DIR", "./CloudFiles"),
+		AvatarDIR:            getEnv("AVATAR_DIR", "./Avatars"),
+		DefaultAvatarPath:    getEnv("DEFAULT_AVATAR_PATH", "./Avatars/DefaultAvatar/DefaultAvatar.png"),
 		MaxFileSize:          int64(getEnvInt("MAX_FILE_SIZE", 25)),            // 25 GB
 		NormalUserMaxStorage: int64(getEnvInt("NORMAL_USER_MAX_STORAGE", 100)), //100 GB
 		LimitedSpeed:         int64(getEnvInt("LIMITED_SPEED", 10)),            // 10 MB/s
@@ -240,3 +255,4 @@ func getEnvInt(key string, fallback int) int {
 	}
 	return fallback
 }
+*/

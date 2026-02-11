@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 type UserHandler struct {
@@ -30,9 +31,14 @@ func NewUserHandler(userService *services.UserService, DefaultAvatarPath string,
 }
 
 func (h *UserHandler) Register(c *gin.Context) {
+	zap.L().Info("注册请求开始",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 	//捕获数据
 	var req model.RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		zap.S().Errorf("淡定请求体数据失败: %v", err)
 		util.Error(c, 400, err.Error())
 		return
 	}
@@ -40,9 +46,15 @@ func (h *UserHandler) Register(c *gin.Context) {
 	//调用服务层
 	user, invitaionCode, err := h.userService.Register(&req)
 	if err != nil {
+		zap.S().Errorf("注册失败: %v", err)
 		util.Error(c, 500, err.Error())
 		return
 	}
+
+	zap.L().Info("注册请求结束",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 
 	//返回响应
 	util.Success(c, gin.H{
@@ -55,9 +67,14 @@ func (h *UserHandler) Register(c *gin.Context) {
 }
 
 func (h *UserHandler) Login(c *gin.Context) {
+	zap.L().Info("登录请求开始",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 	//捕获数据
 	var req model.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		zap.S().Errorf("绑定请求体失败: %v", err)
 		util.Error(c, 400, err.Error())
 		return
 	}
@@ -65,8 +82,14 @@ func (h *UserHandler) Login(c *gin.Context) {
 	//调用服务层
 	token, user, err, refreshToken := h.userService.Login(req.LoginKey, req.Password)
 	if err != nil {
+		zap.S().Errorf("登录失败: %v", err)
 		util.Error(c, 500, err.Error())
 	}
+
+	zap.L().Info("登录请求结束",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 
 	//返回响应
 	util.Success(c, gin.H{
@@ -79,6 +102,10 @@ func (h *UserHandler) Login(c *gin.Context) {
 }
 
 func (h *UserHandler) InfoHandler(c *gin.Context) {
+	zap.L().Info("获取个人信息请求开始",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 	//捕获数据
 	userID, _ := c.Get("user_id")
 	username, _ := c.Get("username")
@@ -86,8 +113,15 @@ func (h *UserHandler) InfoHandler(c *gin.Context) {
 	//调用服务层
 	UsedStorage, err := h.userService.CheckStorage(userID.(int))
 	if err != nil {
+		zap.S().Errorf("查看个人存储空间失败: %v", err)
 		util.Error(c, 500, err.Error())
 	}
+
+	zap.L().Info("获取个人信息请求结束",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
+
 	//返回响应
 	util.Success(c, gin.H{
 		"user_id":      userID,
@@ -98,9 +132,14 @@ func (h *UserHandler) InfoHandler(c *gin.Context) {
 }
 
 func (h *UserHandler) Refresh(c *gin.Context) {
+	zap.L().Info("刷新token请求开始",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 	//绑定数据
 	var req model.RefreshTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		zap.S().Errorf("绑定请求体失败: %v", err)
 		util.Error(c, 400, err.Error())
 		return
 	}
@@ -108,9 +147,15 @@ func (h *UserHandler) Refresh(c *gin.Context) {
 	//调用服务层
 	token, err := h.userService.Refresh(req)
 	if err != nil {
+		zap.S().Errorf("refresh token失败: %v", err)
 		util.Error(c, 500, err.Error())
 		return
 	}
+
+	zap.L().Info("刷新token请求结束",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 
 	//返回响应
 	util.Success(c, gin.H{
@@ -119,9 +164,14 @@ func (h *UserHandler) Refresh(c *gin.Context) {
 }
 
 func (h *UserHandler) Logout(c *gin.Context) {
+	zap.L().Info("登出请求开始",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 	//绑定数据
 	var req model.LogoutRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		zap.S().Errorf("绑定请求体失败: %v", err)
 		util.Error(c, 400, "BindJSON failed")
 		return
 	}
@@ -129,9 +179,15 @@ func (h *UserHandler) Logout(c *gin.Context) {
 	//调用服务层
 	err := h.userService.Logout(req.Token)
 	if err != nil {
-		util.Error(c, 500, "BindJSON failed")
+		zap.S().Errorf("登出失败: %v", err)
+		util.Error(c, 500, "登出失败"+err.Error())
 		return
 	}
+
+	zap.L().Info("登出请求结束",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 
 	//返回响应
 	util.Success(c, gin.H{
@@ -140,10 +196,15 @@ func (h *UserHandler) Logout(c *gin.Context) {
 }
 
 func (h *UserHandler) Update(c *gin.Context) {
+	zap.L().Info("更新用户信息请求开始",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 	//绑定数据
 	UserID, _ := c.Get("user_id")
 	var req model.UpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		zap.S().Errorf("绑定请求体失败: %v", err)
 		util.Error(c, 400, "BindJSON failed")
 		return
 	}
@@ -151,8 +212,14 @@ func (h *UserHandler) Update(c *gin.Context) {
 	//调用服务层
 	user, err := h.userService.UpdateInfo(UserID.(int), req)
 	if err != nil {
+		zap.S().Errorf("更新用户信息: %v", err)
 		util.Error(c, 500, "UpdateInfo failed")
 	}
+
+	zap.L().Info("更新用户信息请求结束",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 
 	//返回响应
 	util.Success(c, gin.H{
@@ -165,14 +232,24 @@ func (h *UserHandler) Update(c *gin.Context) {
 }
 
 func (h *UserHandler) GenerateInvitationCode(c *gin.Context) {
+	zap.L().Info("生成邀请码请求开始",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 	//绑定数据
 	UserID, _ := c.Get("user_id")
 
 	//调用服务层
 	invitationCode, err := h.userService.GenerateInvitationCode(UserID.(int))
 	if err != nil {
+		zap.S().Errorf("生成邀请码失败: %v", err)
 		util.Error(c, 500, "Generate Invitation Code failed")
 	}
+
+	zap.L().Info("生成邀请码请求结束",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 
 	//返回响应
 	util.Success(c, gin.H{
@@ -181,14 +258,24 @@ func (h *UserHandler) GenerateInvitationCode(c *gin.Context) {
 }
 
 func (h *UserHandler) InvitationCodeList(c *gin.Context) {
+	zap.L().Info("获取邀请码列表请求开始",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 	//绑定数据
 	UserID, _ := c.Get("user_id")
 
 	//调用服务层
 	invitationCodes, total, err := h.userService.InvitationCodeList(UserID.(int))
 	if err != nil {
+		zap.S().Errorf("获取邀请码列表失败: %v", err)
 		util.Error(c, 500, "Get Invitation Code List failed")
 	}
+
+	zap.L().Info("获取邀请码列表请求结束",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 
 	//返回响应
 	util.Success(c, gin.H{
@@ -198,9 +285,14 @@ func (h *UserHandler) InvitationCodeList(c *gin.Context) {
 }
 
 func (h *UserHandler) UploadAvatar(c *gin.Context) {
+	zap.L().Info("上传头像请求开始",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 	// 从请求头中获取文件
 	file, err := c.FormFile("avatar")
 	if err != nil {
+		zap.S().Errorf("未选择头像文件")
 		util.Error(c, 400, "请选择头像文件")
 		return
 	}
@@ -209,8 +301,14 @@ func (h *UserHandler) UploadAvatar(c *gin.Context) {
 
 	avatarURL, fileName, contentType, err := h.userService.UploadAvatar(file, userID.(int), userName.(string))
 	if err != nil {
+		zap.S().Errorf("上传头像失败: %v", err)
 		util.Error(c, 500, "Upload Avatar failed")
 	}
+
+	zap.L().Info("上传头像请求结束",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 
 	// 返回成功响应
 	util.Success(c, gin.H{
@@ -222,6 +320,10 @@ func (h *UserHandler) UploadAvatar(c *gin.Context) {
 }
 
 func (h *UserHandler) GetAvatar(c *gin.Context) {
+	zap.L().Info("获取头像请求开始",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 	//补货数据
 	userID, _ := c.Get("user_id")
 
@@ -229,6 +331,7 @@ func (h *UserHandler) GetAvatar(c *gin.Context) {
 	avatarPath, err := h.userService.GetAvatar(userID.(int))
 	if err != nil {
 		// 返回默认头像
+		zap.S().Info("用户无头像文件，返回默认头像")
 		avatarPath = h.DefaultAvatarPath
 	}
 
@@ -236,6 +339,7 @@ func (h *UserHandler) GetAvatar(c *gin.Context) {
 	if exist, err := h.minioClient.Exists(c.Request.Context(), avatarPath); err == nil {
 		// 文件不存在，返回默认头像
 		if !exist {
+			zap.S().Info("用户无头像文件，返回默认头像")
 			avatarPath = h.DefaultAvatarPath
 		}
 	}
@@ -269,11 +373,17 @@ func (h *UserHandler) GetAvatar(c *gin.Context) {
 	//从minIO获取字节数据
 	data, err := h.minioClient.GetBytes(c.Request.Context(), avatarPath)
 	if err != nil {
+		zap.S().Errorf("访问minIO失败: %v", err)
 		util.Error(c, 500, "visit minIO failed")
 		return
 	}
 
 	mimeType := mime.TypeByExtension(ext)
+
+	zap.L().Info("获取头像请求结束",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 
 	//发送字节数据
 	c.Data(http.StatusOK, mimeType, data)
@@ -285,6 +395,10 @@ func (h *UserHandler) GetAvatar(c *gin.Context) {
 }
 
 func (h *UserHandler) GetUniqueAvatar(c *gin.Context) {
+	zap.L().Info("获取指定用户头像请求开始",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 	//补货数据
 	userID, err := strconv.Atoi(c.Param("id"))
 
@@ -292,6 +406,7 @@ func (h *UserHandler) GetUniqueAvatar(c *gin.Context) {
 	avatarPath, err := h.userService.GetAvatar(userID)
 	if err != nil {
 		// 返回默认头像
+		zap.S().Info("用户无头像文件，返回默认头像")
 		avatarPath = h.DefaultAvatarPath
 	}
 
@@ -299,6 +414,7 @@ func (h *UserHandler) GetUniqueAvatar(c *gin.Context) {
 	if exist, err := h.minioClient.Exists(c.Request.Context(), avatarPath); err == nil {
 		// 文件不存在，返回默认头像
 		if !exist {
+			zap.S().Info("用户无头像文件，返回默认头像")
 			avatarPath = h.DefaultAvatarPath
 		}
 	}
@@ -332,11 +448,17 @@ func (h *UserHandler) GetUniqueAvatar(c *gin.Context) {
 	//从minIO获取字节数据
 	data, err := h.minioClient.GetBytes(c.Request.Context(), avatarPath)
 	if err != nil {
+		zap.S().Errorf("访问minIO失败: %v", err)
 		util.Error(c, 500, "visit minIO failed")
 		return
 	}
 
 	mimeType := mime.TypeByExtension(ext)
+
+	zap.L().Info("获取指定用户头像请求结束",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 
 	//发送字节数据
 	c.Data(http.StatusOK, mimeType, data)

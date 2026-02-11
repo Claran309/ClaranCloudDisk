@@ -4,9 +4,9 @@ import (
 	"ClaranCloudDisk/config"
 	"ClaranCloudDisk/model"
 	"errors"
-	"log"
 	"time"
 
+	"go.uber.org/zap"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -31,7 +31,8 @@ func InitMysql(config *config.Config) (*gorm.DB, error) {
 	// 生成邀请码表
 	err = db.AutoMigrate(&model.InvitationCode{})
 	if err != nil {
-		log.Fatal("Failed to migrate user table:", err)
+		zap.S().Fatal("Failed to migrate user table: %v", err)
+		return nil, err
 	}
 	// 生成初始邀请码
 	var FirstAdminCode = model.InvitationCode{
@@ -42,7 +43,8 @@ func InitMysql(config *config.Config) (*gorm.DB, error) {
 	}
 	err = db.Create(&FirstAdminCode).Error
 	if err != nil {
-		log.Fatal("Failed to create First Admin Code:", err)
+		zap.S().Fatal("Failed to create First Admin Code:: %v", err)
+		return nil, err
 	}
 
 	return db, nil

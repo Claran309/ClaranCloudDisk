@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 )
 
 type RedisClient struct {
@@ -34,6 +35,7 @@ func NewRedisClient(addr, password string, db int) Cache {
 func (rc *RedisClient) Set(key string, value interface{}, expiration time.Duration) error {
 	data, err := json.Marshal(value)
 	if err != nil {
+		zap.S().Errorf("缓存键设置失败: %v", err)
 		return err
 	}
 	return rc.client.Set(rc.ctx, key, data, expiration).Err()
@@ -42,6 +44,11 @@ func (rc *RedisClient) Set(key string, value interface{}, expiration time.Durati
 func (rc *RedisClient) Get(key string, dest interface{}) error {
 	data, err := rc.client.Get(rc.ctx, key).Result()
 	if err != nil {
+		if err == redis.Nil {
+			zap.S().Errorf("缓存 %s 未命中: %v", key, err)
+			return err
+		}
+		zap.S().Errorf("缓存 %s 获取失败: %v", key, err)
 		return err
 	}
 	return json.Unmarshal([]byte(data), dest)

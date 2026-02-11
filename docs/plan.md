@@ -55,10 +55,12 @@
 - [x] 编写api说明文档
 - [x] 项目说明文档
 - [x] Viper
-- [ ] Zap
+- [x] Zap
 - [ ] XSS,SQL注入,CSRF
 - [ ] 测试代码（AI写）
 - [ ] vibe 前端
 - [ ] Dockerfile
 - [ ] Docker-compose
 - [ ] Dockerhub
+- [ ] corn job
+- [ ] 后台管理界面

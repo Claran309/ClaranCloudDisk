@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 type FileHandler struct {
@@ -27,10 +28,15 @@ func NewFileHandler(fileService *services.FileService, minioClient *minIO.MinIOC
 }
 
 func (h *FileHandler) Upload(c *gin.Context) {
+	zap.L().Info("上传文件请求开始",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 	//捕获数据
 	userID := c.GetInt("user_id")
 	file, err := c.FormFile("file")
 	if err != nil {
+		zap.S().Errorf("未选择要上传的文件: %v", err)
 		util.Error(c, 400, "请选择要上传的文件: "+err.Error())
 		return
 	}
@@ -38,6 +44,7 @@ func (h *FileHandler) Upload(c *gin.Context) {
 	//打开文件
 	src, err := file.Open()
 	if err != nil {
+		zap.S().Errorf("打开文件失败: %v", err)
 		util.Error(c, 500, "打开文件失败: "+err.Error())
 		return
 	}
@@ -47,9 +54,15 @@ func (h *FileHandler) Upload(c *gin.Context) {
 	ctx := c.Request.Context()
 	fileContent, err := h.fileService.Upload(ctx, userID, src, file)
 	if err != nil {
+		zap.S().Errorf("上传文件失败: %v", err)
 		util.Error(c, 500, "上传失败: "+err.Error())
 		return
 	}
+
+	zap.L().Info("上传文件请求结束",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 
 	//返回响应
 	util.Success(c, gin.H{"data": gin.H{
@@ -62,11 +75,16 @@ func (h *FileHandler) Upload(c *gin.Context) {
 }
 
 func (h *FileHandler) ChunkUpload(c *gin.Context) {
+	zap.L().Info("上传分片请求开始",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 	//捕获数据
 	userID := c.GetInt("user_id")
 	//获取分片文件
 	file, err := c.FormFile("chunk")
 	if err != nil {
+		zap.S().Errorf("无分片文件: %v", err)
 		util.Error(c, 400, "无分片文件")
 		return
 	}
@@ -77,27 +95,32 @@ func (h *FileHandler) ChunkUpload(c *gin.Context) {
 	fileName := c.PostForm("file_name")
 	fileMimeType := c.PostForm("file_mime_type") // mimetype
 	if chunkIndexStr == "" || chunkTotalStr == "" || fileHash == "" || fileName == "" {
+		zap.S().Errorf("无分片元数据: %v", err)
 		util.Error(c, 400, "请上传元数据")
 		return
 	}
 	//string -> int
 	chunkIndex, err := strconv.Atoi(chunkIndexStr)
 	if err != nil {
+		zap.S().Errorf("不正确的chunkIndex格式: %v", err)
 		util.Error(c, 400, "chunkIndex应当是数字")
 		return
 	}
 	chunkTotal, err := strconv.Atoi(chunkTotalStr)
 	if err != nil {
+		zap.S().Errorf("不正确的chunkTotal格式: %v", err)
 		util.Error(c, 400, "chunkTotal应当是数字")
 		return
 	}
 
 	if chunkIndex < 0 || chunkTotal < 1 {
+		zap.S().Errorf("不正确的chunkIndex或chunkTotal: %v", err)
 		util.Error(c, 400, "chunkIndex或chunkTotal错误")
 	}
 
 	fileReader, err := file.Open()
 	if err != nil {
+		zap.S().Errorf("打开分片文件: %v", err)
 		util.Error(c, 500, "打开分片文件失败")
 		return
 	}
@@ -106,6 +129,7 @@ func (h *FileHandler) ChunkUpload(c *gin.Context) {
 	chunkData := make([]byte, file.Size)
 	_, err = fileReader.Read(chunkData)
 	if err != nil {
+		zap.S().Errorf("读取分片文件失败: %v", err)
 		util.Error(c, 500, "读取分片文件失败")
 		return
 	}
@@ -115,6 +139,7 @@ func (h *FileHandler) ChunkUpload(c *gin.Context) {
 	if chunkIndex == 0 {
 		err := h.fileService.InitChunkUpload(userID, fileName, fileHash, chunkTotal) // 初始化上传，创建临时文件夹
 		if err != nil {
+			zap.S().Errorf("初始化上传失败: %v", err)
 			util.Error(c, 500, "初始化上传失败")
 			return
 		}
@@ -123,6 +148,7 @@ func (h *FileHandler) ChunkUpload(c *gin.Context) {
 	//保存分片文件
 	err = h.fileService.SaveChunk(fileHash, userID, chunkIndex, chunkData)
 	if err != nil {
+		zap.S().Errorf("保存分片文件失败: %v", err)
 		util.Error(c, 500, err.Error())
 		return
 	}
@@ -131,9 +157,16 @@ func (h *FileHandler) ChunkUpload(c *gin.Context) {
 	if chunkIndex == chunkTotal-1 {
 		file, err := h.fileService.MergeAllChunks(userID, fileHash, fileName, fileMimeType)
 		if err != nil {
+			zap.S().Errorf("合并分片失败: %v", err)
 			util.Error(c, 500, "合并分片失败")
 			return
 		}
+
+		zap.L().Info("上传分片请求结束",
+			zap.String("url", c.Request.RequestURI),
+			zap.String("method", c.Request.Method),
+			zap.String("client_ip", c.ClientIP()))
+
 		util.Success(c, gin.H{
 			"id":         file.ID,
 			"name":       file.Name,
@@ -142,6 +175,11 @@ func (h *FileHandler) ChunkUpload(c *gin.Context) {
 			"created_at": file.CreatedAt,
 		}, "文件上传成功")
 	}
+
+	zap.L().Info("上传分片请求结束",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 
 	//返回响应
 	util.Success(c, gin.H{
@@ -152,9 +190,14 @@ func (h *FileHandler) ChunkUpload(c *gin.Context) {
 }
 
 func (h *FileHandler) GetChunkStatus(c *gin.Context) {
+	zap.L().Info("获取分片状态请求开始",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 	//捕获数据
 	fileHash := c.Query("file_hash")
 	if fileHash == "" {
+		zap.S().Errorf("缺少filehash参数")
 		util.Error(c, 500, "缺少fileHash参数")
 		return
 	}
@@ -162,9 +205,15 @@ func (h *FileHandler) GetChunkStatus(c *gin.Context) {
 	//服务层
 	uploadedChunks, err := h.fileService.GetUploadedChunks(fileHash)
 	if err != nil {
+		zap.S().Errorf("获取分片状态失败: %v", err)
 		util.Error(c, 500, err.Error())
 		return
 	}
+
+	zap.L().Info("获取分片状态请求结束",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 
 	//成功响应
 	util.Success(c, gin.H{
@@ -176,10 +225,15 @@ func (h *FileHandler) GetChunkStatus(c *gin.Context) {
 
 // Download /:id/download
 func (h *FileHandler) Download(c *gin.Context) {
+	zap.L().Info("下载请求开始",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 	//捕获数据
 	userID := c.GetInt("user_id")
 	fileID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
+		zap.S().Errorf("无效的文件ID: %v", err)
 		util.Error(c, 400, "无效的文件ID")
 		return
 	}
@@ -188,6 +242,7 @@ func (h *FileHandler) Download(c *gin.Context) {
 	ctx := c.Request.Context()
 	file, limitedSpeed, err := h.fileService.Download(ctx, userID, fileID)
 	if err != nil || limitedSpeed == -1 {
+		zap.S().Errorf("文件不存在或无权限访问: %v", err)
 		util.Error(c, 404, "文件不存在或无权访问: "+err.Error())
 		return
 	}
@@ -205,6 +260,7 @@ func (h *FileHandler) Download(c *gin.Context) {
 	//从minIO获取文件流
 	stream, err := h.minioClient.GetStream(c, file.Path)
 	if err != nil {
+		zap.S().Errorf("从minIO获取文件失败: %v", err)
 		util.Error(c, 500, "从minIO获取文件失败"+err.Error())
 		return
 	}
@@ -213,6 +269,10 @@ func (h *FileHandler) Download(c *gin.Context) {
 	//不限速
 	if limitedSpeed == 0 {
 		io.Copy(c.Writer, stream)
+		zap.L().Info("下载请求结束",
+			zap.String("url", c.Request.RequestURI),
+			zap.String("method", c.Request.Method),
+			zap.String("client_ip", c.ClientIP()))
 		return
 	}
 
@@ -252,12 +312,20 @@ func (h *FileHandler) Download(c *gin.Context) {
 
 				if err != nil {
 					if err == io.EOF {
+						zap.L().Info("下载请求结束",
+							zap.String("url", c.Request.RequestURI),
+							zap.String("method", c.Request.Method),
+							zap.String("client_ip", c.ClientIP()))
 						return // 文件读取完成
 					}
 					return
 				}
 			}
 		case <-ctx.Done():
+			zap.L().Info("下载请求超时",
+				zap.String("url", c.Request.RequestURI),
+				zap.String("method", c.Request.Method),
+				zap.String("client_ip", c.ClientIP()))
 			return // 上下文取消
 		}
 	}
@@ -327,10 +395,15 @@ func (h *FileHandler) Download(c *gin.Context) {
 
 // GetFileInfo /:id
 func (h *FileHandler) GetFileInfo(c *gin.Context) {
+	zap.L().Info("获取文件信息请求开始",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 	//捕获数据
 	userID := c.GetInt("user_id")
 	fileID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
+		zap.S().Errorf("无效的文件ID: %v", err)
 		util.Error(c, 400, "无效的文件ID")
 		return
 	}
@@ -339,15 +412,25 @@ func (h *FileHandler) GetFileInfo(c *gin.Context) {
 	ctx := c.Request.Context()
 	file, err := h.fileService.GetFileInfo(ctx, userID, fileID)
 	if err != nil {
+		zap.S().Errorf("文件不存在或无权限访问: %v", err)
 		util.Error(c, 404, "文件不存在或无权访问: "+err.Error())
 		return
 	}
+
+	zap.L().Info("获取文件信息请求结束",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 
 	//返回响应
 	util.Success(c, gin.H{"data": file}, "获取成功")
 }
 
 func (h *FileHandler) GetFileList(c *gin.Context) {
+	zap.L().Info("获取文件列表请求开始",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 	//捕获数据
 	userID := c.GetInt("user_id")
 
@@ -355,9 +438,15 @@ func (h *FileHandler) GetFileList(c *gin.Context) {
 	ctx := c.Request.Context()
 	files, total, err := h.fileService.GetFileList(ctx, userID)
 	if err != nil {
+		zap.S().Errorf("获取文件列表失败: %v", err)
 		util.Error(c, 500, "获取文件列表失败: "+err.Error())
 		return
 	}
+
+	zap.L().Info("获取文件列表请求结束",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 
 	//范湖响应
 	util.Success(c, gin.H{
@@ -368,10 +457,15 @@ func (h *FileHandler) GetFileList(c *gin.Context) {
 
 // Delete /:id
 func (h *FileHandler) Delete(c *gin.Context) {
+	zap.L().Info("删除文件请求开始",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 	//捕获数据
 	userID := c.GetInt("user_id")
 	fileID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
+		zap.S().Errorf("无效的文件ID: %v", err)
 		util.Error(c, 400, "无效的文件ID")
 		return
 	}
@@ -379,15 +473,25 @@ func (h *FileHandler) Delete(c *gin.Context) {
 	//服务层
 	ctx := c.Request.Context()
 	if err := h.fileService.DeleteFile(ctx, userID, fileID); err != nil {
+		zap.S().Errorf("删除失败: %v", err)
 		util.Error(c, 500, "删除失败"+err.Error())
 		return
 	}
+
+	zap.L().Info("删除文件请求结束",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 
 	//返回响应
 	util.Success(c, gin.H{}, "删除成功")
 }
 
 func (h *FileHandler) GetStarList(c *gin.Context) {
+	zap.L().Info("获取收藏列表请求开始",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 	//捕获数据
 	userID := c.GetInt("user_id")
 
@@ -395,9 +499,15 @@ func (h *FileHandler) GetStarList(c *gin.Context) {
 	ctx := c.Request.Context()
 	files, total, err := h.fileService.GetStarList(ctx, userID)
 	if err != nil {
+		zap.S().Errorf("获取文件列表失败: %v", err)
 		util.Error(c, 500, "获取文件列表失败: "+err.Error())
 		return
 	}
+
+	zap.L().Info("获取收藏列表请求结束",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 
 	//范湖响应
 	util.Success(c, gin.H{
@@ -407,6 +517,10 @@ func (h *FileHandler) GetStarList(c *gin.Context) {
 }
 
 func (h *FileHandler) Star(c *gin.Context) {
+	zap.L().Info("收藏文件请求开始",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 	//捕获数据
 	userID := c.GetInt("user_id")
 	fileID, err := strconv.ParseInt(c.Param("id"), 10, 64)
@@ -414,9 +528,15 @@ func (h *FileHandler) Star(c *gin.Context) {
 	//服务层
 	file, err := h.fileService.Star(c, userID, fileID)
 	if err != nil {
+		zap.S().Errorf("收藏文件失败: %v", err)
 		util.Error(c, 500, "收藏文件失败: "+err.Error())
 		return
 	}
+
+	zap.L().Info("收藏文件请求结束",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 
 	// 响应
 	util.Success(c, gin.H{
@@ -425,6 +545,10 @@ func (h *FileHandler) Star(c *gin.Context) {
 }
 
 func (h *FileHandler) Unstar(c *gin.Context) {
+	zap.L().Info("取消收藏文件请求开始",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 	//捕获数据
 	userID := c.GetInt("user_id")
 	fileID, err := strconv.ParseInt(c.Param("id"), 10, 64)
@@ -432,9 +556,15 @@ func (h *FileHandler) Unstar(c *gin.Context) {
 	//服务层
 	file, err := h.fileService.Unstar(c, userID, fileID)
 	if err != nil {
-		util.Error(c, 500, "收藏文件失败: "+err.Error())
+		zap.S().Errorf("取消收藏文件失败: %v", err)
+		util.Error(c, 500, "取消收藏文件失败: "+err.Error())
 		return
 	}
+
+	zap.L().Info("取消收藏文件请求结束",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 
 	// 响应
 	util.Success(c, gin.H{
@@ -444,15 +574,21 @@ func (h *FileHandler) Unstar(c *gin.Context) {
 
 // Rename /:id/rename
 func (h *FileHandler) Rename(c *gin.Context) {
+	zap.L().Info("重命名文件请求开始",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 	//捕获数据
 	userID := c.GetInt("user_id")
 	fileID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
+		zap.S().Errorf("无效的文件ID: %v", err)
 		util.Error(c, 400, "无效的文件ID")
 		return
 	}
 	var req model.RenameRequest
 	if err := c.ShouldBind(&req); err != nil {
+		zap.S().Errorf("绑定请求体失败: %v", err)
 		util.Error(c, 400, err.Error())
 		return
 	}
@@ -461,9 +597,15 @@ func (h *FileHandler) Rename(c *gin.Context) {
 	ctx := c.Request.Context()
 	file, err := h.fileService.RenameFile(ctx, userID, fileID, req.Name)
 	if err != nil {
+		zap.S().Errorf("重命名失败: %v", err)
 		util.Error(c, 500, "重命名失败: "+err.Error())
 		return
 	}
+
+	zap.L().Info("重命名文件请求开始",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 
 	//返回响应
 	util.Success(c, gin.H{
@@ -472,10 +614,15 @@ func (h *FileHandler) Rename(c *gin.Context) {
 }
 
 func (h *FileHandler) Preview(c *gin.Context) {
+	zap.L().Info("预览文件请求开始",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 	//捕获数据
 	userID := c.GetInt("user_id")
 	fileID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
+		zap.S().Errorf("无效的文件ID: %v", err)
 		util.Error(c, 400, "无效的文件ID")
 		return
 	}
@@ -484,16 +631,19 @@ func (h *FileHandler) Preview(c *gin.Context) {
 	ctx := c.Request.Context()
 	file, err := h.fileService.GetFileInfo(ctx, userID, fileID)
 	if err != nil {
+		zap.S().Errorf("文件不存在或无权限访问: %v", err)
 		util.Error(c, 404, "文件不存在或无权访问: "+err.Error())
 		return
 	}
 
 	exist, err := h.minioClient.Exists(c, file.Path)
 	if err != nil {
+		zap.S().Errorf("检查文件失败: %v", err)
 		util.Error(c, 500, "检查文件失败"+err.Error())
 		return
 	}
 	if !exist {
+		zap.S().Errorf("文件已丢失")
 		util.Error(c, 404, "文件已丢失")
 		return
 	}
@@ -508,6 +658,7 @@ func (h *FileHandler) Preview(c *gin.Context) {
 	//服务层获取文件类型
 	fileType, err := h.fileService.GetMimeType(ctx, file)
 	if err != nil {
+		zap.S().Errorf("获取文件类型失败: %v", err)
 		util.Error(c, 500, "获取文件类型失败: "+err.Error())
 		return
 	}
@@ -525,9 +676,14 @@ func (h *FileHandler) Preview(c *gin.Context) {
 	case "other":
 		h.PreText(c, file) // // 其他类型尝试作为文本预览
 	default:
+		zap.S().Errorf("未解析的文件类型: %s", fileType)
 		util.Error(c, 500, "未解析的文件类型")
 		return
 	}
+	zap.L().Info("预览文件请求结束",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 }
 
 func (h *FileHandler) PreImage(c *gin.Context, file *model.File) {
@@ -543,6 +699,7 @@ func (h *FileHandler) PreImage(c *gin.Context, file *model.File) {
 	//从minIO获取文件流
 	stream, err := h.minioClient.GetStream(c, file.Path)
 	if err != nil {
+		zap.S().Errorf("从minIO获取文件失败: %v", err)
 		util.Error(c, 500, "从minIO获取文件失败"+err.Error())
 		return
 	}
@@ -570,6 +727,7 @@ func (h *FileHandler) PreVideo(c *gin.Context, file *model.File) {
 	//从minIO获取文件流
 	stream, err := h.minioClient.GetStream(c.Request.Context(), file.Path)
 	if err != nil {
+		zap.S().Errorf("从minIO获取文件失败: %v", err)
 		util.Error(c, 500, "从minIO获取文件失败"+err.Error())
 		return
 	}
@@ -594,6 +752,7 @@ func (h *FileHandler) PreAudio(c *gin.Context, file *model.File) {
 	//从minIO获取文件流
 	stream, err := h.minioClient.GetStream(c.Request.Context(), file.Path)
 	if err != nil {
+		zap.S().Errorf("从minIO获取文件失败: %v", err)
 		util.Error(c, 500, "从minIO获取文件失败"+err.Error())
 		return
 	}
@@ -625,6 +784,7 @@ func (h *FileHandler) PreDoc(c *gin.Context, file *model.File) {
 	//从minIO获取文件流
 	stream, err := h.minioClient.GetStream(c, file.Path)
 	if err != nil {
+		zap.S().Errorf("从minIO获取文件失败: %v", err)
 		util.Error(c, 500, "从minIO获取文件失败"+err.Error())
 		return
 	}
@@ -640,6 +800,7 @@ func (h *FileHandler) PreText(c *gin.Context, file *model.File) {
 	//从minIO获取文件流
 	stream, err := h.minioClient.GetStream(c, file.Path)
 	if err != nil {
+		zap.S().Errorf("从minIO获取文件失败: %v", err)
 		util.Error(c, 500, "从minIO获取文件失败"+err.Error())
 		return
 	}
@@ -662,10 +823,15 @@ func (h *FileHandler) PreText(c *gin.Context, file *model.File) {
 }
 
 func (h *FileHandler) GetPreInfo(c *gin.Context) {
+	zap.L().Info("获取文件预览内容请求开始",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 	// 捕获数据
 	userID := c.GetInt("user_id")
 	fileID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
+		zap.S().Errorf("无效的文件ID: %v", err)
 		util.Error(c, 400, "无效的文件ID")
 		return
 	}
@@ -674,12 +840,14 @@ func (h *FileHandler) GetPreInfo(c *gin.Context) {
 	ctx := c.Request.Context()
 	file, err := h.fileService.GetFileInfo(ctx, userID, fileID)
 	if err != nil {
+		zap.S().Errorf("文件不存在或无权限访问: %v", err)
 		util.Error(c, 404, "文件不存在或无权访问: "+err.Error())
 		return
 	}
 
 	exist, err := h.minioClient.Exists(c, file.Path)
 	if err != nil || !exist {
+		zap.S().Errorf("文件已丢失: %v", err)
 		util.Error(c, 404, "文件已丢失")
 		return
 	}
@@ -694,6 +862,7 @@ func (h *FileHandler) GetPreInfo(c *gin.Context) {
 	//服务层获取文件类型
 	fileType, err := h.fileService.GetMimeType(ctx, file)
 	if err != nil {
+		zap.S().Errorf("”获取文件类型失败: %v", err)
 		util.Error(c, 500, "获取文件类型失败: "+err.Error())
 		return
 	}
@@ -749,15 +918,25 @@ func (h *FileHandler) GetPreInfo(c *gin.Context) {
 	c.Header("Content-Type", MimeType)
 	c.Header("Accept-Ranges", "bytes")
 
+	zap.L().Info("获取文件预览内容请求结束",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
+
 	// 让Gin处理Range请求
 	c.File(file.Path)
 }
 
 func (h *FileHandler) GetContent(c *gin.Context) {
+	zap.L().Info("获取文件预览信息请求开始",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 	// 捕获数据
 	userID := c.GetInt("user_id")
 	fileID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
+		zap.S().Errorf("无效的文件ID: %v", err)
 		util.Error(c, 400, "无效的文件ID")
 		return
 	}
@@ -766,6 +945,7 @@ func (h *FileHandler) GetContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	file, err := h.fileService.GetFileInfo(ctx, userID, fileID)
 	if err != nil {
+		zap.S().Errorf("文件不存在或无权限访问: %v", err)
 		util.Error(c, 404, "文件不存在或无权访问: "+err.Error())
 		return
 	}
@@ -773,6 +953,7 @@ func (h *FileHandler) GetContent(c *gin.Context) {
 	//服务层获取文件类型
 	fileType, err := h.fileService.GetMimeType(ctx, file)
 	if err != nil {
+		zap.S().Errorf("获取文件类型失败: %v", err)
 		util.Error(c, 500, "获取文件类型失败: "+err.Error())
 		return
 	}
@@ -844,24 +1025,40 @@ func (h *FileHandler) GetContent(c *gin.Context) {
 		"created_at":   file.CreatedAt,
 	}
 
+	zap.L().Info("获取文件预览信息请求结束",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
+
 	util.Success(c, gin.H{
 		"file": previewInfo,
 	}, "获取预览信息成功")
 }
 
 func (h *FileHandler) SearchFile(c *gin.Context) {
+	zap.L().Info("搜索文件请求开始",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 	//补货数据
 	userID := c.GetInt("user_id")
 	var req model.SearchFileRequest
 	if err := c.ShouldBind(&req); err != nil {
+		zap.S().Errorf("绑定请求体失败: %v", err)
 		util.Error(c, 500, err.Error())
 	}
 
 	//服务层
 	files, total, err := h.fileService.SearchFile(userID, req)
 	if err != nil {
+		zap.S().Errorf("搜索文件失败: %v", err)
 		util.Error(c, 400, err.Error())
 	}
+
+	zap.L().Info("搜索文件请求结束",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 
 	//成功响应
 	util.Success(c, gin.H{
@@ -871,18 +1068,29 @@ func (h *FileHandler) SearchFile(c *gin.Context) {
 }
 
 func (h *FileHandler) SoftDelete(c *gin.Context) {
+	zap.L().Info("软删除文件请求开始",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 	// 捕获数据
 	userID := c.GetInt("user_id")
 	fileID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
+		zap.S().Errorf("转换FileID失败: %v", err)
 		util.Error(c, 400, err.Error())
 	}
 
 	//服务层
 	err = h.fileService.SoftDelete(userID, int(fileID))
 	if err != nil {
+		zap.S().Errorf("软删除文件失败: %v", err)
 		util.Error(c, 400, err.Error())
 	}
+
+	zap.L().Info("软删除文件请求结束",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 
 	//成功响应
 	util.Success(c, gin.H{
@@ -892,18 +1100,29 @@ func (h *FileHandler) SoftDelete(c *gin.Context) {
 }
 
 func (h *FileHandler) RecoverFile(c *gin.Context) {
+	zap.L().Info("恢复文件请求开始",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 	// 捕获数据
 	userID := c.GetInt("user_id")
 	fileID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
+		zap.S().Errorf("转换FileID失败: %v", err)
 		util.Error(c, 400, err.Error())
 	}
 
 	//服务层
 	err = h.fileService.RecoverFile(userID, int(fileID))
 	if err != nil {
+		zap.S().Errorf("恢复文件失败: %v", err)
 		util.Error(c, 400, err.Error())
 	}
+
+	zap.L().Info("恢复文件请求结束",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 
 	//成功响应
 	util.Success(c, gin.H{
@@ -913,6 +1132,10 @@ func (h *FileHandler) RecoverFile(c *gin.Context) {
 }
 
 func (h *FileHandler) GetBinList(c *gin.Context) {
+	zap.L().Info("获取回收站文件列表请求开始",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 	//捕获数据
 	userID := c.GetInt("user_id")
 
@@ -920,9 +1143,15 @@ func (h *FileHandler) GetBinList(c *gin.Context) {
 	ctx := c.Request.Context()
 	files, total, err := h.fileService.GetBinList(ctx, userID)
 	if err != nil {
+		zap.S().Errorf("获取回收站文件列表失败: %v", err)
 		util.Error(c, 500, "获取文件列表失败: "+err.Error())
 		return
 	}
+
+	zap.L().Info("获取回收站文件列表请求结束",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
 
 	//范湖响应
 	util.Success(c, gin.H{
