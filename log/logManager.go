@@ -47,7 +47,7 @@ func (m *MyEncoder) EncodeEntry(entry zapcore.Entry, fields []zapcore.Field) (*b
 	// 自定义前缀数据
 	DataStr := buf.String()
 	buf.Reset()
-	buf.AppendString(m.AppName + DataStr)
+	buf.AppendString("[" + m.AppName + "]" + DataStr)
 
 	// 时间分片
 	m.writer.mu.Lock()
