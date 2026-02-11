@@ -71,7 +71,7 @@
 {
   "username": "john_doe",
   "password": "password123",
-  "email": "john@INFO.log.example.com",
+  "email": "john@20XX-X-XX INFO.log.example.com",
   "role": "user",
   "invite_code": "ABC123DEF"
 }
@@ -85,7 +85,7 @@
   "data": {
     "username": "john_doe",
     "user_id": 1,
-    "email": "john@INFO.log.example.com",
+    "email": "john@20XX-X-XX INFO.log.example.com",
     "inviter": 2,
     "invitation_code": "ABC123DEF"
   }
@@ -137,7 +137,7 @@
   "data": {
     "username": "john_doe",
     "user_id": 1,
-    "email": "john@INFO.log.example.com",
+    "email": "john@20XX-X-XX INFO.log.example.com",
     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
     "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
   }
@@ -287,7 +287,7 @@
 ```json
 {
   "username": "new_username",
-  "email": "new@INFO.log.example.com"
+  "email": "new@20XX-X-XX INFO.log.example.com"
 }
 ```
 
@@ -298,7 +298,7 @@
   "message": "Update information successfully",
   "data": {
     "username": "new_username",
-    "email": "new@INFO.log.example.com",
+    "email": "new@20XX-X-XX INFO.log.example.com",
     "password": "*******",
     "is_vip": false,
     "role": "user"
@@ -555,7 +555,7 @@ Cache-Control: public, max-age=31536000
 **请求体示例**:
 ```json
 {
-  "email": "user@INFO.log.example.com"
+  "email": "user@20XX-X-XX INFO.log.example.com"
 }
 ```
 
@@ -565,7 +565,7 @@ Cache-Control: public, max-age=31536000
   "code": 200,
   "message": "验证码发送成功",
   "data": {
-    "email": "user@INFO.log.example.com"
+    "email": "user@20XX-X-XX INFO.log.example.com"
   }
 }
 ```
@@ -592,7 +592,7 @@ Cache-Control: public, max-age=31536000
 **请求体示例**:
 ```json
 {
-  "email": "user@INFO.log.example.com",
+  "email": "user@20XX-X-XX INFO.log.example.com",
   "code": "123456"
 }
 ```
@@ -603,7 +603,7 @@ Cache-Control: public, max-age=31536000
   "code": 200,
   "message": "验证成功",
   "data": {
-    "email": "user@INFO.log.example.com",
+    "email": "user@20XX-X-XX INFO.log.example.com",
     "verified": true
   }
 }
@@ -645,7 +645,7 @@ Cache-Control: public, max-age=31536000
   "message": "文件上传成功",
   "data": {
     "id": 1,
-    "name": "INFO.log.example.txt",
+    "name": "20XX-X-XX INFO.log.example.txt",
     "size": 1024,
     "mime_type": "text/plain",
     "created_at": "2023-10-01T12:00:00Z"
@@ -706,7 +706,7 @@ Cache-Control: public, max-age=31536000
   "message": "文件上传成功",
   "data": {
     "id": 1,
-    "name": "INFO.log.example.zip",
+    "name": "20XX-X-XX INFO.log.example.zip",
     "size": 1024000,
     "mime_type": "application/zip",
     "created_at": "2023-10-01T12:00:00Z"
@@ -828,9 +828,9 @@ Content-Transfer-Encoding: binary
   "data": {
     "id": 1,
     "user_id": 1,
-    "name": "INFO.log.example.txt",
+    "name": "20XX-X-XX INFO.log.example.txt",
     "filename": "example_12345.txt",
-    "path": "/uploads/INFO.log.example.txt",
+    "path": "/uploads/20XX-X-XX INFO.log.example.txt",
     "size": 1024,
     "hash": "a1b2c3d4e5f6",
     "mime_type": "text/plain",
@@ -877,9 +877,9 @@ Content-Transfer-Encoding: binary
       {
         "id": 1,
         "user_id": 1,
-        "name": "INFO.log.example.txt",
+        "name": "20XX-X-XX INFO.log.example.txt",
         "filename": "example_12345.txt",
-        "path": "/uploads/INFO.log.example.txt",
+        "path": "/uploads/20XX-X-XX INFO.log.example.txt",
         "size": 1024,
         "hash": "a1b2c3d4e5f6",
         "mime_type": "text/plain",
@@ -1072,9 +1072,9 @@ Content-Transfer-Encoding: binary
       {
         "id": 1,
         "user_id": 1,
-        "name": "INFO.log.example.txt",
+        "name": "20XX-X-XX INFO.log.example.txt",
         "filename": "example_12345.txt",
-        "path": "/uploads/INFO.log.example.txt",
+        "path": "/uploads/20XX-X-XX INFO.log.example.txt",
         "size": 1024,
         "hash": "a1b2c3d4e5f6",
         "mime_type": "text/plain",
@@ -1157,7 +1157,7 @@ Content-Transfer-Encoding: binary
     "user_id": 1,
     "name": "new_filename.txt",
     "filename": "example_12345.txt",
-    "path": "/uploads/INFO.log.example.txt",
+    "path": "/uploads/20XX-X-XX INFO.log.example.txt",
     "size": 1024,
     "hash": "a1b2c3d4e5f6",
     "mime_type": "text/plain",
@@ -1323,7 +1323,7 @@ Content-Range: bytes 0-1023/102400  # 仅在使用Range请求时包含
   "data": {
     "file": {
       "id": 1,
-      "name": "INFO.log.example.docx",
+      "name": "20XX-X-XX INFO.log.example.docx",
       "size": 1024000,
       "mime_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       "category": "application",
@@ -1385,9 +1385,9 @@ Content-Range: bytes 0-1023/102400  # 仅在使用Range请求时包含
       {
         "id": 1,
         "user_id": 1,
-        "name": "INFO.log.example.txt",
+        "name": "20XX-X-XX INFO.log.example.txt",
         "filename": "example_12345.txt",
-        "path": "/uploads/INFO.log.example.txt",
+        "path": "/uploads/20XX-X-XX INFO.log.example.txt",
         "size": 1024,
         "hash": "a1b2c3d4e5f6",
         "mime_type": "text/plain",
@@ -1476,9 +1476,9 @@ Content-Range: bytes 0-1023/102400  # 仅在使用Range请求时包含
     "file": {
       "id": 1,
       "user_id": 1,
-      "name": "INFO.log.example.txt",
+      "name": "20XX-X-XX INFO.log.example.txt",
       "filename": "example_12345.txt",
-      "path": "/uploads/INFO.log.example.txt",
+      "path": "/uploads/20XX-X-XX INFO.log.example.txt",
       "size": 1024,
       "hash": "a1b2c3d4e5f6",
       "mime_type": "text/plain",
@@ -1533,9 +1533,9 @@ Content-Range: bytes 0-1023/102400  # 仅在使用Range请求时包含
     "file": {
       "id": 1,
       "user_id": 1,
-      "name": "INFO.log.example.txt",
+      "name": "20XX-X-XX INFO.log.example.txt",
       "filename": "example_12345.txt",
-      "path": "/uploads/INFO.log.example.txt",
+      "path": "/uploads/20XX-X-XX INFO.log.example.txt",
       "size": 1024,
       "hash": "a1b2c3d4e5f6",
       "mime_type": "text/plain",
@@ -1581,7 +1581,7 @@ Content-Range: bytes 0-1023/102400  # 仅在使用Range请求时包含
 **请求体示例**:
 ```json
 {
-  "keywords": "INFO.log.example"
+  "keywords": "20XX-X-XX INFO.log.example"
 }
 ```
 
@@ -1595,9 +1595,9 @@ Content-Range: bytes 0-1023/102400  # 仅在使用Range请求时包含
       {
         "id": 1,
         "user_id": 1,
-        "name": "INFO.log.example.txt",
+        "name": "20XX-X-XX INFO.log.example.txt",
         "filename": "example_12345.txt",
-        "path": "/uploads/INFO.log.example.txt",
+        "path": "/uploads/20XX-X-XX INFO.log.example.txt",
         "size": 1024,
         "hash": "a1b2c3d4e5f6",
         "mime_type": "text/plain",
@@ -1751,9 +1751,9 @@ Content-Range: bytes 0-1023/102400  # 仅在使用Range请求时包含
             "file": {
               "id": 1,
               "user_id": 1,
-              "name": "INFO.log.example.txt",
+              "name": "20XX-X-XX INFO.log.example.txt",
               "filename": "example_12345.txt",
-              "path": "/uploads/INFO.log.example.txt",
+              "path": "/uploads/20XX-X-XX INFO.log.example.txt",
               "size": 1024,
               "mime_type": "text/plain",
               "ext": "txt",
@@ -1879,9 +1879,9 @@ Content-Range: bytes 0-1023/102400  # 仅在使用Range请求时包含
       {
         "id": 1,
         "user_id": 1,
-        "name": "INFO.log.example.txt",
+        "name": "20XX-X-XX INFO.log.example.txt",
         "filename": "example_12345.txt",
-        "path": "/uploads/INFO.log.example.txt",
+        "path": "/uploads/20XX-X-XX INFO.log.example.txt",
         "size": 1024,
         "hash": "a1b2c3d4e5f6",
         "mime_type": "text/plain",
@@ -2018,7 +2018,7 @@ Content-Transfer-Encoding: binary
     "file": {
       "id": 5,
       "user_id": 2,
-      "name": "INFO.log.example.txt",
+      "name": "20XX-X-XX INFO.log.example.txt",
       "filename": "example_copy_12345.txt",
       "path": "/uploads/example_copy.txt",
       "size": 1024,
