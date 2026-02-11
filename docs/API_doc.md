@@ -2385,13 +2385,6 @@ FROM_EMAIL=                   # 服务器邮箱地址
 | username | string | 用户名 | `c.GetString("username")` |
 | role | string | 用户角色 | `c.GetString("role")` |
 
-**使用示例**:
-```go
-// 在路由中使用
-file := r.Group("/file")
-file.Use(jwtMiddleware.JWTAuthentication())
-file.GET("/list", fileHandler.GetFileList)
-```
 
 **错误响应**:
 - 401: 未登录、令牌格式错误、令牌过期、令牌无效
@@ -2417,16 +2410,105 @@ file.GET("/list", fileHandler.GetFileList)
 **前提条件**:
 此中间件必须在 `JWTAuthentication` 之后使用，因为需要上下文中的用户信息。
 
-**使用示例**:
-```go
-// 保护需要管理员权限的路由
-admin := r.Group("/admin")
-admin.Use(jwtMiddleware.JWTAuthentication(), jwtMiddleware.JWTAuthorization())
-admin.GET("/users", adminHandler.GetAllUsers)
-```
 
 **错误响应**:
 - 403: 无权限（非管理员用户）
+
+### 限流中间件
+用于防止接口被过度调用，保护系统免受恶意请求和DDoS攻击。
+
+#### RateLimitedMiddleware
+基于令牌桶算法的请求限流中间件，控制接口访问频率。
+
+**作用**:
+1. 限制单位时间内的请求数量，防止接口被过度调用
+2. 保护系统资源，避免因过多请求导致服务不可用
+3. 记录频率过高的请求日志，便于监控和分析
+4. 返回标准化的限流错误响应
+
+**工作流程**:
+```
+1. 初始化令牌桶限流器
+2. 检查当前请求是否可以通过限流器
+3. 如果可以通行，放行请求
+4. 如果被限流，记录错误日志并返回429状态码
+5. 返回友好的限流提示信息
+```
+
+**配置参数**:
+- `maxRequestsEveryMinute`: 每分钟允许的最大请求数
+
+
+**错误响应**:
+- 429: 请求过于频繁，超过限制
+- 500: 服务器内部错误
+
+### 安全中间件
+用于增强Web应用的安全性，设置HTTP安全头，防止常见的Web攻击。
+
+#### SecurityMiddleware
+设置一系列HTTP安全响应头，提高Web应用的安全性。
+
+**作用**:
+1. **防止点击劫持**: 通过X-Frame-Options阻止页面被嵌入到iframe中
+2. **防止MIME类型嗅探**: 阻止浏览器尝试猜测内容类型
+3. **XSS防护**: 启用浏览器的内置XSS过滤机制
+4. **内容安全策略**: 控制允许加载的资源来源，防止代码注入攻击
+5. **推荐人策略**: 控制Referer头的发送
+6. **权限策略**: 限制某些浏览器功能的使用
+
+**安全头说明**:
+
+| 安全头 | 值 | 作用 |
+|--------|----|------|
+| X-Frame-Options | DENY | 禁止页面被嵌入到iframe中，防止点击劫持 |
+| X-Content-Type-Options | nosniff | 阻止浏览器MIME类型嗅探，强制使用声明的Content-Type |
+| X-XSS-Protection | 1; mode=block | 启用浏览器XSS过滤器，并在检测到XSS攻击时阻止页面渲染 |
+| Content-Security-Policy | 见下表 | 内容安全策略，限制资源加载来源 |
+| Referrer-Policy | strict-origin-when-cross-origin | 控制Referer头的发送策略 |
+| Permissions-Policy | geolocation=(), microphone=(), camera=() | 限制地理位置、麦克风、摄像头等权限 |
+
+**Content-Security-Policy详解**:
+
+| 指令 | 值 | 说明 |
+|------|----|------|
+| default-src | 'self' | 默认只允许同源资源 |
+| script-src | 'self' 'unsafe-inline' 'unsafe-eval' | 允许同源脚本、内联脚本、eval函数 |
+| style-src | 'self' 'unsafe-inline' | 允许同源样式、内联样式 |
+| img-src | 'self' data: https: | 允许同源图片、data URL、HTTPS图片 |
+| font-src | 'self' | 只允许同源字体 |
+| connect-src | 'self' | 只允许同源连接（XMLHttpRequest, WebSocket等） |
+| frame-ancestors | 'none' | 禁止任何页面嵌套当前页面 |
+
+**安全策略说明**:
+
+1. **点击劫持防护**:
+    - 完全禁止页面被嵌入到iframe中
+    - 防止恶意网站通过iframe嵌入您的网站进行钓鱼攻击
+
+2. **MIME类型嗅探防护**:
+    - 强制浏览器使用服务器声明的Content-Type
+    - 防止浏览器错误解析文件类型导致的安全问题
+
+3. **XSS防护**:
+    - 启用浏览器的XSS过滤器
+    - 检测到XSS攻击时阻止页面渲染
+    - 提供基本的反射型XSS防护
+
+4. **内容安全策略**:
+    - 严格控制资源加载来源
+    - 防止恶意脚本注入
+    - 限制不安全的资源加载
+
+5. **推荐人策略**:
+    - 同源时发送完整的URL
+    - 跨域时只发送源（协议+域名+端口）
+    - 保护用户隐私，防止敏感信息泄露
+
+6. **权限策略**:
+    - 禁用地理位置、麦克风、摄像头等敏感权限
+    - 防止恶意网站获取用户隐私信息
+    - 需要时可在特定页面单独开启
 
 ---
 
