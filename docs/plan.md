@@ -66,6 +66,7 @@
 - [ ] 后台管理界面
 - [ ] 测试代码（AI写）
 - [ ] vibe 前端
+- [ ] cors跨域处理
 - [ ] Dockerfile
 - [ ] Docker-compose
 - [ ] Dockerhub
