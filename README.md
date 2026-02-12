@@ -2,7 +2,7 @@
 
 轻量级网盘后端服务
 
-基本开发完成，待docker部署
+开发完成，待测试和部署docker
 
 初始化邀请码：`"FirstAdminCode"` 
 
