@@ -63,7 +63,6 @@
 | username | string | 是 | 用户名 | "john_doe" |
 | password | string | 是 | 密码 | "password123" |
 | email | string | 是 | 邮箱地址 | "john@example.com" |
-| role | string | 是 | 用户角色 | "user" |
 | invite_code | string | 是 | 邀请码 | "ABC123DEF" |
 
 **请求体示例**:
@@ -72,7 +71,6 @@
   "username": "john_doe",
   "password": "password123",
   "email": "john@20XX-X-XX INFO.log.example.com",
-  "role": "user",
   "invite_code": "ABC123DEF"
 }
 ```

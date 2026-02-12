@@ -57,6 +57,7 @@
     - [x] ban user
     - [x] recover banned user
     - [x] banned user list
+    - [ ] give admin
 - [x] 编写api说明文档
 - [x] 项目说明文档
 - [x] Viper
@@ -66,8 +67,18 @@
   - [x] SQL注入：gorm内部会自动进行参数化处理，并且项目内基本使用了参数化查询，基本没有风险
   - [x] CSRF：正常来说应使用CSRF中间件并进行CSRF Token认证，但是本项目认证方式为通过请求头传递的jwt，不会被CSRF攻击
   - [x] 其他： 添加RateLimited中间件和Security中间件
-- [ ] 项目测试
-- [ ] vibe 前端
+- [ ] api测试 - APIFox
+- [ ] Swagger
+- [ ] vibe 前端 - gemini
+- [ ] 项目本地部署测试
+- 文档相关
+    - [ ] 项目说明文档
+    - [ ] plan
+    - [ ] api_doc
+    - [ ] swagger
+    - [ ] apiFox文档
+    - [ ] 要求实现文档
+    - [ ] README.md
 - [ ] Dockerfile
 - [ ] Docker-compose
 - [ ] Dockerhub

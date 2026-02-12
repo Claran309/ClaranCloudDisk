@@ -70,8 +70,13 @@ func (s *UserService) Register(req *model.RegisterRequest) (*model.User, *model.
 		Username: req.Username,
 		Password: hashedPassword, // 加密存储
 		Email:    req.Email,
-		Role:     req.Role,
+		Role:     "user",
 		Storage:  0,
+	}
+
+	// 如果是服务器用户
+	if invitationCode.Code == "FirstAdminCode" && invitationCode.CreatorUserID == 1 && invitationCode.IsUsed == false && invitationCode.UserID == 1 {
+		user.Role = "admin"
 	}
 
 	//传入数据库
