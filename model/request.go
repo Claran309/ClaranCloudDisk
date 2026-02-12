@@ -48,16 +48,26 @@ type CreateShareRequest struct {
 
 // GetVerificationCodeRequest "/user/get_verification_code"
 type GetVerificationCodeRequest struct {
-	Email string
+	Email string `json:"email" binding:"required"`
 }
 
 // VerifyVerificationCodeRequest "/user/verify_verification_code"
 type VerifyVerificationCodeRequest struct {
-	Email string
-	Code  string
+	Email string `json:"email" binding:"required"`
+	Code  string `json:"code" binding:"required"`
 }
 
 // SearchFileRequest "/file/search"
 type SearchFileRequest struct {
-	Keywords string
+	Keywords string `json:"keywords" binding:"required"`
+}
+
+// BanUserRequest "/admin/ban_user"
+type BanUserRequest struct {
+	UserID int `json:"user_id" binding:"required"`
+}
+
+// RecoverUserRequest "/admin/ban_user/recover"
+type RecoverUserRequest struct {
+	UserID int `json:"user_id" binding:"required"`
 }

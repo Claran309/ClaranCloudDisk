@@ -19,6 +19,8 @@ type UserRepository interface {
 	GetStorage(userID int) (int64, error)
 	GetVIP(userID int) (bool, error)
 	GetInvitationCodeList(userID int) ([]model.InvitationCode, int64, error)
+	GetAllUserRecourse() (int64, int64, error)
+	GetBannedUsers() ([]model.User, int64, error)
 
 	// 更新
 	UpdateUsername(userID int, username string) error
@@ -27,6 +29,8 @@ type UserRepository interface {
 	UpdateRole(userID int, role string) error
 	UpdateStorage(userID int, storage int64) error
 	AddInvitationCodeNum(userID int) error
+	BanUser(userID int) error
+	RecoverUser(userID int) error
 
 	// 邀请码相关
 	ValidateInvitationCode(invitationCode string) (model.InvitationCode, error)

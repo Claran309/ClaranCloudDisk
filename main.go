@@ -75,11 +75,13 @@ func main() {
 	fileService := services.NewUFileService(fileRepo, userRepo, minIOClient, cfg.CloudFileDir, cfg.MaxFileSize, cfg.NormalUserMaxStorage, cfg.LimitedSpeed)
 	shareService := services.NewShareService(shareRepo, fileRepo, userRepo, cfg.CloudFileDir)
 	verificationService := services.NewVerificationService(verificationRepo, cfg.Email)
+	adminService := services.NewAdminService(userRepo)
 	// 处理器层依赖
 	userHandler := handlers.NewUserHandler(userService, cfg.DefaultAvatarPath, minIOClient)
 	fileHandler := handlers.NewFileHandler(fileService, minIOClient)
 	shareHandler := handlers.NewShareHandler(shareService)
 	verificationHandler := handlers.NewVerificationHandler(verificationService)
+	adminHandler := handlers.NewAdminHandler(adminService)
 	//创建中间件
 	securityMiddleware := middleware.NewSecurity(cfg.MaxRequests)
 	jwtMiddleware := middleware.NewJWTMiddleware(jwtUtil, tokenRepo)
@@ -151,6 +153,20 @@ func main() {
 	share.GET("/:unique_id", shareHandler.GetShareInfo)                       // 查看分享
 	share.GET("/:unique_id/:file_id/download", shareHandler.DownloadSpecFile) // 下载指定文件
 	share.POST("/:unique_id/:file_id/save", shareHandler.SaveSpecFile)        // 转存指定文件
+	//=======================================后台管理路由===============================================
+	zap.L().Info("启动路由服务",
+		zap.String("service", "admin-service"),
+		zap.String("host", cfg.Host),
+		zap.Int("port", cfg.Port))
+	admin := r.Group("/admin")
+	admin.Use(securityMiddleware.SecurityMiddleware())
+	admin.Use(securityMiddleware.RateLimitedMiddleware())
+	admin.Use(jwtMiddleware.JWTAuthentication())                // 登录
+	admin.Use(jwtMiddleware.JWTAuthorization())                 // admin鉴权
+	admin.GET("/info", adminHandler.GetInfo)                    // 获取资源信息
+	admin.POST("/ban_user", adminHandler.BanUser)               // 封禁用户
+	admin.POST("/ban_user/recover", adminHandler.RecoverUser)   // 解封用户
+	admin.GET("/ban_user/list", adminHandler.GetBannedUserList) // 获取封禁用户列表
 
 	err = r.Run(fmt.Sprintf(cfg.Host, ":", cfg.Port))
 	if err != nil {
@@ -159,6 +175,18 @@ func main() {
 }
 
 /*
+results, err := client.Scan("/path/to/file")
+if err != nil {
+    // Handle error
+}
+
+for _, result := range results {
+    fmt.Printf("Path: %s, Status: %s\n", result.Path, result.Status)
+    if result.Virus != "" {
+        fmt.Printf("Virus detected: %s\n", result.Virus)
+    }
+}
+
 func loadServe() {
 	//=====================================配置管理======================================================
 	//cfg := config.LoadConfig()
@@ -268,7 +296,7 @@ func loadServe() {
 */
 
 /*
-API sum: 37
+API sum: 40
 
 各路由请求体应有数据：
 

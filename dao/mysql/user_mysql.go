@@ -3,6 +3,7 @@ package mysql
 import (
 	"ClaranCloudDisk/dao/cache"
 	"ClaranCloudDisk/model"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -791,4 +792,161 @@ func (repo *mysqlUserRepo) GetAvatar(userID int) (string, error) {
 	}
 
 	return user.Avatar, nil
+}
+
+func (repo *mysqlUserRepo) GetAllUserRecourse() (int64, int64, error) {
+	//缓存
+	if repo.cache != nil {
+		cacheKey := fmt.Sprintf("usernum")
+		storageKey := fmt.Sprintf("all_storage")
+		var userNum int64
+		var storageNum int64
+		if err := repo.cache.Get(cacheKey, &userNum); err == nil {
+			if errEx := repo.cache.Get(storageKey, &storageNum); errEx == nil {
+				return userNum, storageNum, nil
+			}
+		}
+	}
+
+	//数据库
+	var users []model.User
+	var userNum int64
+	var storageNum int64
+	err := repo.db.Where("is_banned = ?", false).Find(&users).Error
+	if err != nil {
+		return -1, -1, errors.New("get user failed")
+	}
+	userNum = int64(len(users))
+	for _, user := range users {
+		storageNum += user.Storage
+	}
+
+	//写入缓存
+	if repo.cache != nil {
+		// 分布式锁
+		lockKey := fmt.Sprintf("lock:recourse")
+		if success, _ := repo.cache.Lock(lockKey, 10*time.Second); success {
+			defer repo.cache.Unlock(lockKey)
+
+			cacheKey := fmt.Sprintf("usernum")
+			if err := repo.cache.Set(cacheKey, userNum, repo.cache.RandExp(5*time.Minute)); err != nil {
+				return -1, -1, err
+			}
+			StorageKey := fmt.Sprintf("all_storage")
+			if err := repo.cache.Set(StorageKey, storageNum, repo.cache.RandExp(5*time.Minute)); err != nil {
+				return -1, -1, err
+			}
+		}
+	}
+
+	return userNum, storageNum, nil
+}
+
+func (repo *mysqlUserRepo) BanUser(userID int) error {
+	return repo.db.Transaction(func(tx *gorm.DB) error {
+		var user model.User
+		err := repo.db.Model(&user).Where("user_id = ?", userID).Update("is_banned", true).Error
+		if err != nil {
+			return errors.New("ban user failed")
+		}
+
+		//更新后数据
+		err = repo.db.Where("user_id = ?", userID).First(&user).Error
+		if err != nil {
+			return errors.New("update user failed")
+		}
+
+		//写后删除缓存
+		err = repo.cache.Delete(fmt.Sprintf("user:id:%d", user.UserID))
+		if err != nil {
+			return errors.New("delete user failed")
+		}
+		err = repo.cache.Delete(fmt.Sprintf("user:username:%s", user.Username))
+		if err != nil {
+			return errors.New("delete user failed")
+		}
+		err = repo.cache.Delete(fmt.Sprintf("user:email:%s", user.Email))
+		if err != nil {
+			return errors.New("delete user failed")
+		}
+
+		return nil
+	})
+}
+
+func (repo *mysqlUserRepo) RecoverUser(userID int) error {
+	return repo.db.Transaction(func(tx *gorm.DB) error {
+		var user model.User
+		err := repo.db.Model(&user).Where("user_id = ?", userID).Update("is_banned", false).Error
+		if err != nil {
+			return errors.New("recover banned user failed")
+		}
+
+		//更新后数据
+		err = repo.db.Where("user_id = ?", userID).First(&user).Error
+		if err != nil {
+			return errors.New("update user failed")
+		}
+
+		//写后删除缓存
+		err = repo.cache.Delete(fmt.Sprintf("user:id:%d", user.UserID))
+		if err != nil {
+			return errors.New("delete user failed")
+		}
+		err = repo.cache.Delete(fmt.Sprintf("user:username:%s", user.Username))
+		if err != nil {
+			return errors.New("delete user failed")
+		}
+		err = repo.cache.Delete(fmt.Sprintf("user:email:%s", user.Email))
+		if err != nil {
+			return errors.New("delete user failed")
+		}
+
+		return nil
+	})
+}
+
+func (repo *mysqlUserRepo) GetBannedUsers() ([]model.User, int64, error) {
+	//缓存
+	if repo.cache != nil {
+		cacheKey := fmt.Sprintf("banned_users")
+		jsonDatas, err := repo.cache.SMembers(cacheKey)
+		if err == nil {
+			var users []model.User
+			for _, jsonData := range jsonDatas {
+				var user model.User
+				err := json.Unmarshal([]byte(jsonData), &user)
+				if err == nil {
+					users = append(users, user)
+				}
+			}
+			return users, int64(len(users)), nil
+		}
+	}
+
+	//数据库
+	var users []model.User
+	err := repo.db.Where("is_banned = ?", true).First(&users).Error
+	if err != nil {
+		return nil, -1, errors.New("get user status failed")
+	}
+
+	//写入缓存
+	if repo.cache != nil {
+		// 分布式锁
+		lockKey := fmt.Sprintf("lock:banned_user")
+		if success, _ := repo.cache.Lock(lockKey, 10*time.Second); success {
+			defer repo.cache.Unlock(lockKey)
+
+			for _, user := range users {
+				cacheKey := fmt.Sprintf("banned_users")
+				err := repo.cache.SAdd(cacheKey, user)
+				if err != nil {
+					return nil, -1, errors.New("add banned user cache failed")
+				}
+			}
+		}
+	}
+
+	return users, int64(len(users)), nil
 }

@@ -2057,6 +2057,233 @@ Content-Transfer-Encoding: binary
 - 404: 分享或文件不存在
 - 409: 文件名冲突
 - 500: 转存失败
+---
+
+## 后台管理模块
+
+后台管理模块提供系统管理员专用的管理接口，包括系统监控、用户管理等功能。所有接口需要双重认证：JWT身份认证和admin角色权限认证。
+
+### 1. 获取系统资源信息
+获取系统的总体资源统计信息，包括用户总数和总存储空间使用情况。
+
+- **URL**: `/admin/info`
+- **方法**: `GET`
+- **认证**: 需要 Bearer Token 和 admin 角色权限
+- **Content-Type**: 无
+
+**请求头**:
+
+| 请求头 | 值 | 说明 |
+|--------|----|------|
+| Authorization | Bearer {token} | 访问令牌 |
+
+**注意**: 此接口需要用户角色为"admin"，普通用户无法访问。
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "获取资源信息成功",
+  "data": {
+    "totalUser": 150,
+    "totalStorage": 53687091200
+  }
+}
+```
+
+**响应字段说明**:
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| totalUser | integer | 系统总用户数 |
+| totalStorage | integer | 系统总存储空间使用量（字节） |
+
+**错误码**:
+- 401: 令牌无效或未登录
+- 403: 无权限（非admin角色）
+- 500: 获取资源信息失败
+
+### 2. 封禁用户
+封禁指定用户账号，禁止其登录和使用系统。
+
+- **URL**: `/admin/ban_user`
+- **方法**: `POST`
+- **认证**: 需要 Bearer Token 和 admin 角色权限
+- **Content-Type**: `application/json`
+
+**请求头**:
+
+| 请求头 | 值 | 说明 |
+|--------|----|------|
+| Authorization | Bearer {token} | 访问令牌 |
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 说明 | 示例 |
+|--------|------|------|------|------|
+| user_id | integer | 是 | 要封禁的用户ID | 123 |
+
+**请求体示例**:
+```json
+{
+  "user_id": 123
+}
+```
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "封禁用户成功",
+  "data": {
+    "userId": 123,
+    "is_banned": true
+  }
+}
+```
+
+**响应字段说明**:
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| userId | integer | 被封禁的用户ID |
+| is_banned | boolean | 封禁状态，true表示已封禁 |
+
+**错误码**:
+- 400: 请求参数错误
+- 401: 令牌无效或未登录
+- 403: 无权限（非admin角色）
+- 404: 用户不存在
+- 500: 封禁用户失败
+
+### 3. 解封用户
+解除指定用户的封禁状态，恢复其账号正常使用。
+
+- **URL**: `/admin/ban_user/recover`
+- **方法**: `POST`
+- **认证**: 需要 Bearer Token 和 admin 角色权限
+- **Content-Type**: `application/json`
+
+**请求头**:
+
+| 请求头 | 值 | 说明 |
+|--------|----|------|
+| Authorization | Bearer {token} | 访问令牌 |
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 说明 | 示例 |
+|--------|------|------|------|------|
+| user_id | integer | 是 | 要解封的用户ID | 123 |
+
+**请求体示例**:
+```json
+{
+  "user_id": 123
+}
+```
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "解封用户成功",
+  "data": {
+    "userId": 123,
+    "is_banned": false
+  }
+}
+```
+
+**响应字段说明**:
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| userId | integer | 被解封的用户ID |
+| is_banned | boolean | 封禁状态，false表示已解封 |
+
+**错误码**:
+- 400: 请求参数错误
+- 401: 令牌无效或未登录
+- 403: 无权限（非admin角色）
+- 404: 用户不存在
+- 500: 解封用户失败
+
+### 4. 获取封禁用户列表
+获取当前被管理员封禁的所有用户列表。
+
+- **URL**: `/admin/ban_user/list`
+- **方法**: `GET`
+- **认证**: 需要 Bearer Token 和 admin 角色权限
+- **Content-Type**: 无
+
+**请求头**:
+
+| 请求头 | 值 | 说明 |
+|--------|----|------|
+| Authorization | Bearer {token} | 访问令牌 |
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "获取封禁用户列表成功",
+  "data": {
+    "users": [
+      {
+        "user_id": 123,
+        "username": "bad_user",
+        "email": "bad_user@example.com",
+        "role": "user",
+        "is_vip": false,
+        "is_banned": true,
+        "storage": 1073741824,
+        "generated_invitation_code_num": 5,
+        "avatar": "/avatars/user_123.jpg"
+      },
+      {
+        "user_id": 456,
+        "username": "spammer",
+        "email": "spammer@example.com",
+        "role": "user",
+        "is_vip": false,
+        "is_banned": true,
+        "storage": 536870912,
+        "generated_invitation_code_num": 2,
+        "avatar": "/avatars/user_456.jpg"
+      }
+    ],
+    "total": 2
+  }
+}
+```
+
+**响应字段说明**:
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| users[].user_id | integer | 用户ID |
+| users[].username | string | 用户名 |
+| users[].email | string | 邮箱地址 |
+| users[].role | string | 用户角色 |
+| users[].is_vip | boolean | 是否为VIP用户 |
+| users[].is_banned | boolean | 是否被封禁 |
+| users[].storage | integer | 用户存储空间使用量（字节） |
+| users[].generated_invitation_code_num | integer | 已生成的邀请码数量 |
+| users[].avatar | string | 头像路径 |
+| total | integer | 封禁用户总数 |
+
+**注意**: 返回的用户列表不包含密码字段（密码字段在模型中被标记为`json:"-"`）。
+
+**错误码**:
+- 401: 令牌无效或未登录
+- 403: 无权限（非admin角色）
+- 500: 获取封禁用户列表失败
+
+
+**注意**: 所有后台管理接口都需要有效的JWT令牌，并且用户角色必须为"admin"。普通用户即使有有效令牌也无法访问这些接口。所有管理操作都会被记录到日志中，便于审计和追溯。
+
+---
 
 # 机制和功能说明
 
@@ -2547,17 +2774,18 @@ Content-Type: application/json
 #### User
 用户信息模型。
 
-| 字段 | 类型 | 必填 | 说明 | 示例 |
-|------|------|------|------|------|
-| user_id | integer | 是 | 用户ID | 1 |
-| username | string | 是 | 用户名 | "john_doe" |
-| email | string | 是 | 邮箱地址 | "john@example.com" |
-| password | string | 是 | 密码（哈希值） | "hashed_password" |
-| role | string | 是 | 用户角色 | "user" 或 "admin" |
-| is_vip | boolean | 是 | 是否为VIP用户 | false |
-| storage | integer | 是 | 存储空间（字节） | 1073741824 |
+| 字段                            | 类型 | 必填 | 说明       | 示例 |
+|-------------------------------|------|------|----------|------|
+| user_id                       | integer | 是 | 用户ID     | 1 |
+| username                      | string | 是 | 用户名      | "john_doe" |
+| email                         | string | 是 | 邮箱地址     | "john@example.com" |
+| password                      | string | 是 | 密码（哈希值）  | "hashed_password" |
+| role                          | string | 是 | 用户角色     | "user" 或 "admin" |
+| is_vip                        | boolean | 是 | 是否为VIP用户 | false |
+| is_banned                     | boolean | 是 | 是否被封禁    | false |
+| storage                       | integer | 是 | 存储空间（字节） | 1073741824 |
 | generated_invitation_code_num | integer | 是 | 已生成的邀请码数量 | 5 |
-| avatar | string | 是 | 头像路径 | "/avatars/user_1.jpg" |
+| avatar                        | string | 是 | 头像路径     | "/avatars/user_1.jpg" |
 
 #### InvitationCode
 邀请码模型。
@@ -2802,14 +3030,26 @@ Content-Type: application/json
 4. **防彩虹表**: 自动加盐处理，防止彩虹表攻击，确保相同密码的哈希值也不同
 5. **标准化**: 符合安全标准，避免自定义加密算法的安全风险
 
-### 配置管理
+### 后台管理功能说明
 
-系统采用Viper配置管理框架，支持YAML配置文件和环境变量扩展：
+#### 用户管理功能
+系统管理员可以对用户账号进行管理：
 
-1. YAML配置: 使用结构化的YAML格式管理所有系统配置，提高可读性和可维护性
-2. 环境变量扩展: 配置文件支持环境变量插值，方便不同环境部署
-3. 配置热重载: 监控配置文件变化，支持配置动态更新而无需重启服务
-4. 类型安全: 通过结构体映射配置，确保配置访问的类型安全
-5. 集中管理: 所有配置项统一存储在config.yaml文件中，便于管理和版本控制
+1. **用户封禁**: 管理员可以封禁违规用户账号，禁止其登录和访问系统
+2. **用户解封**: 管理员可以解除对用户的封禁，恢复其正常使用权限
+3. **封禁列表**: 查看所有被封禁的用户账号，便于管理和审计
+4. **权限控制**: 只有管理员角色的用户才能执行封禁和解封操作
 
-注意: 配置热重载会立即加载新配置，但某些配置需要重启服务才能完全生效
+#### 系统监控功能
+管理员可以查看系统整体运行状况：
+
+1. **用户统计**: 查看系统总用户数
+2. **存储监控**: 查看系统总存储空间使用情况
+3. **资源管理**: 监控系统资源使用趋势，为扩容和优化提供数据支持
+
+#### 权限控制
+后台管理接口采用双重安全控制：
+
+1. **身份认证**: 通过JWT令牌验证用户身份
+2. **角色授权**: 验证用户角色是否为"admin"
+3. **操作审计**: 所有管理操作都记录详细的日志
