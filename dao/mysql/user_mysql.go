@@ -950,3 +950,125 @@ func (repo *mysqlUserRepo) GetBannedUsers() ([]model.User, int64, error) {
 
 	return users, int64(len(users)), nil
 }
+
+func (repo *mysqlUserRepo) UpdateUserRole(userID int, role string) error {
+	return repo.db.Transaction(func(tx *gorm.DB) error {
+		var user model.User
+		err := repo.db.Model(&user).Where("user_id = ?", userID).Update("role", role).Error
+		if err != nil {
+			return errors.New("recover banned user failed")
+		}
+
+		//更新后数据
+		err = repo.db.Where("user_id = ?", userID).First(&user).Error
+		if err != nil {
+			return errors.New("update user failed")
+		}
+
+		//写后删除缓存
+		err = repo.cache.Delete(fmt.Sprintf("user:id:%d", user.UserID))
+		if err != nil {
+			return errors.New("delete user failed")
+		}
+		err = repo.cache.Delete(fmt.Sprintf("user:username:%s", user.Username))
+		if err != nil {
+			return errors.New("delete user failed")
+		}
+		err = repo.cache.Delete(fmt.Sprintf("user:email:%s", user.Email))
+		if err != nil {
+			return errors.New("delete user failed")
+		}
+
+		return nil
+	})
+}
+
+func (repo *mysqlUserRepo) GetUsers() ([]model.User, int64, error) {
+	//缓存
+	if repo.cache != nil {
+		cacheKey := fmt.Sprintf("users")
+		jsonDatas, err := repo.cache.SMembers(cacheKey)
+		if err == nil {
+			var users []model.User
+			for _, jsonData := range jsonDatas {
+				var user model.User
+				err := json.Unmarshal([]byte(jsonData), &user)
+				if err == nil {
+					users = append(users, user)
+				}
+			}
+			return users, int64(len(users)), nil
+		}
+	}
+
+	//数据库
+	var users []model.User
+	err := repo.db.Where("user_id > ?", 0).First(&users).Error
+	if err != nil {
+		return nil, -1, errors.New("get user status failed")
+	}
+
+	//写入缓存
+	if repo.cache != nil {
+		// 分布式锁
+		lockKey := fmt.Sprintf("lock:users")
+		if success, _ := repo.cache.Lock(lockKey, 10*time.Second); success {
+			defer repo.cache.Unlock(lockKey)
+
+			for _, user := range users {
+				cacheKey := fmt.Sprintf("users")
+				err := repo.cache.SAdd(cacheKey, user)
+				if err != nil {
+					return nil, -1, errors.New("add users cache failed")
+				}
+			}
+		}
+	}
+
+	return users, int64(len(users)), nil
+}
+
+func (repo *mysqlUserRepo) GetAdmin() ([]model.User, int64, error) {
+	//缓存
+	if repo.cache != nil {
+		cacheKey := fmt.Sprintf("admin_users")
+		jsonDatas, err := repo.cache.SMembers(cacheKey)
+		if err == nil {
+			var users []model.User
+			for _, jsonData := range jsonDatas {
+				var user model.User
+				err := json.Unmarshal([]byte(jsonData), &user)
+				if err == nil {
+					users = append(users, user)
+				}
+			}
+			return users, int64(len(users)), nil
+		}
+	}
+
+	//数据库
+	var users []model.User
+	err := repo.db.Where("role = ?", "admin").First(&users).Error
+	if err != nil {
+		return nil, -1, errors.New("get user status failed")
+	}
+
+	//写入缓存
+	if repo.cache != nil {
+		// 分布式锁
+		lockKey := fmt.Sprintf("lock:admin_users")
+		if success, _ := repo.cache.Lock(lockKey, 10*time.Second); success {
+			defer repo.cache.Unlock(lockKey)
+
+			for _, user := range users {
+				cacheKey := fmt.Sprintf("admin_users")
+				err := repo.cache.SAdd(cacheKey, user)
+				if err != nil {
+					return nil, -1, errors.New("add admin users cache failed")
+				}
+			}
+		}
+	}
+
+	return users, int64(len(users)), nil
+}

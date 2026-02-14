@@ -167,6 +167,10 @@ func main() {
 	admin.POST("/ban_user", adminHandler.BanUser)               // 封禁用户
 	admin.POST("/ban_user/recover", adminHandler.RecoverUser)   // 解封用户
 	admin.GET("/ban_user/list", adminHandler.GetBannedUserList) // 获取封禁用户列表
+	admin.GET("/user_list", adminHandler.GetUsersList)          // 获取所有用户列表
+	admin.POST("/op/give", adminHandler.GiveAdmin)              // 设置用户管理员身份
+	admin.POST("/op/deprive", adminHandler.DepriveAdmin)        // 剥夺用户管理员身份
+	admin.GET("/op", adminHandler.GetAdminList)                 // 获取管理员用户列表
 
 	err = r.Run(fmt.Sprintf(cfg.Host, ":", cfg.Port))
 	if err != nil {

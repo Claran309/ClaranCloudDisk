@@ -70,3 +70,13 @@ type BanUserRequest struct {
 type RecoverUserRequest struct {
 	UserID int `json:"user_id" binding:"required"`
 }
+
+// GiveAdminRequest "/op/give"
+type GiveAdminRequest struct {
+	UserID int `json:"user_id" binding:"required"`
+}
+
+// DepriveAdminRequest "/op/deprive
+type DepriveAdminRequest struct {
+	UserID int `json:"user_id" binding:"required"`
+}

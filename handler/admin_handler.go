@@ -128,3 +128,113 @@ func (h *AdminHandler) GetBannedUserList(c *gin.Context) {
 		"total": total,
 	}, "获取封禁用户列表成功")
 }
+
+func (h *AdminHandler) GiveAdmin(c *gin.Context) {
+	zap.L().Info("设置用户管理员身份请求开始",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
+
+	var req model.GiveAdminRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		zap.S().Errorf("补货请求体数据错误: %v", err)
+		util.Error(c, 500, "补货请求体数据错误")
+		return
+	}
+
+	userID, err := h.adminService.GiveAdmin(req.UserID)
+	if err != nil {
+		zap.S().Errorf("op用户失败: %v", err)
+		util.Error(c, 500, "op用户失败")
+		return
+	}
+
+	zap.L().Info("设置用户管理员身份请求结束",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
+
+	util.Success(c, gin.H{
+		"userId": userID,
+		"role":   "admin",
+	}, "设置用户管理员身份成功")
+}
+
+func (h *AdminHandler) DepriveAdmin(c *gin.Context) {
+	zap.L().Info("取消用户管理员身份请求开始",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
+
+	var req model.DepriveAdminRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		zap.S().Errorf("补货请求体数据错误: %v", err)
+		util.Error(c, 500, "补货请求体数据错误")
+		return
+	}
+
+	userID, err := h.adminService.DepriveAdmin(req.UserID)
+	if err != nil {
+		zap.S().Errorf("取消用户op失败: %v", err)
+		util.Error(c, 500, "取消用户op失败")
+		return
+	}
+
+	zap.L().Info("取消用户管理员身份请求结束",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
+
+	util.Success(c, gin.H{
+		"userId": userID,
+		"role":   "user",
+	}, "取消用户管理员身份成功")
+}
+
+func (h *AdminHandler) GetUsersList(c *gin.Context) {
+	zap.L().Info("获取用户列表请求开始",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
+
+	users, total, err := h.adminService.GetUsersList()
+	if err != nil {
+		zap.S().Errorf("获取用户列表失败: %v", err)
+		util.Error(c, 500, "获取用户列表失败")
+		return
+	}
+
+	zap.L().Info("获取用户列表请求结束",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
+
+	util.Success(c, gin.H{
+		"users": users,
+		"total": total,
+	}, "获取用户列表成功")
+}
+
+func (h *AdminHandler) GetAdminList(c *gin.Context) {
+	zap.L().Info("获取op用户列表请求开始",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
+
+	users, total, err := h.adminService.GetAdminList()
+	if err != nil {
+		zap.S().Errorf("获取op用户列表失败: %v", err)
+		util.Error(c, 500, "获取op用户列表失败")
+		return
+	}
+
+	zap.L().Info("获取op用户列表请求结束",
+		zap.String("url", c.Request.RequestURI),
+		zap.String("method", c.Request.Method),
+		zap.String("client_ip", c.ClientIP()))
+
+	util.Success(c, gin.H{
+		"users": users,
+		"total": total,
+	}, "获取op用户列表成功")
+}

@@ -21,6 +21,8 @@ type UserRepository interface {
 	GetInvitationCodeList(userID int) ([]model.InvitationCode, int64, error)
 	GetAllUserRecourse() (int64, int64, error)
 	GetBannedUsers() ([]model.User, int64, error)
+	GetUsers() ([]model.User, int64, error)
+	GetAdmin() ([]model.User, int64, error)
 
 	// 更新
 	UpdateUsername(userID int, username string) error
@@ -28,6 +30,7 @@ type UserRepository interface {
 	UpdateEmail(userID int, email string) error
 	UpdateRole(userID int, role string) error
 	UpdateStorage(userID int, storage int64) error
+	UpdateUserRole(userID int, role string) error
 	AddInvitationCodeNum(userID int) error
 	BanUser(userID int) error
 	RecoverUser(userID int) error

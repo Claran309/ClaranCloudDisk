@@ -57,7 +57,8 @@
     - [x] ban user
     - [x] recover banned user
     - [x] banned user list
-    - [ ] give admin
+    - [x] give/deprive admin
+    - [x] user/admin list
 - [x] 编写api说明文档
 - [x] 项目说明文档
 - [x] Viper

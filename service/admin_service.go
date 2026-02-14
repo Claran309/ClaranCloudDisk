@@ -48,3 +48,39 @@ func (s *AdminService) GetBannedUserList() ([]model.User, int64, error) {
 
 	return users, total, nil
 }
+
+func (s *AdminService) GiveAdmin(userID int) (int, error) {
+	err := s.userRepo.UpdateUserRole(userID, "admin")
+	if err != nil {
+		return -1, err
+	}
+
+	return userID, nil
+}
+
+func (s *AdminService) DepriveAdmin(userID int) (int, error) {
+	err := s.userRepo.UpdateUserRole(userID, "user")
+	if err != nil {
+		return -1, err
+	}
+
+	return userID, nil
+}
+
+func (s *AdminService) GetUsersList() ([]model.User, int64, error) {
+	users, total, err := s.userRepo.GetUsers()
+	if err != nil {
+		return nil, -1, err
+	}
+
+	return users, total, nil
+}
+
+func (s *AdminService) GetAdminList() ([]model.User, int64, error) {
+	users, total, err := s.userRepo.GetAdmin()
+	if err != nil {
+		return nil, -1, err
+	}
+
+	return users, total, nil
+}
