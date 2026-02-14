@@ -6,6 +6,17 @@
 
 初始化邀请码：`"FirstAdminCode"` 
 
+bucket_name不允许大写字母
+
+```
+// fake name
+CLOUD_FILE_DIR=/CloudFiles
+AVATAR_DIR=/Avatars
+
+// true name and no "./"
+DEFAULT_AVATAR_PATH=/Avatars/DefaultAvatar/DefaultAvatar.png
+```
+
 ## 相关文档
 | 文档                                                                                   | 备注     |
 |--------------------------------------------------------------------------------------|--------|

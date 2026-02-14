@@ -107,7 +107,7 @@ func InitConfigByViper() *Config {
 		JWTExpireHours:       viper.GetInt("jwt.exp_time_hours"),
 		CloudFileDir:         viper.GetString("app.file.cloud_file_dir"),
 		AvatarDIR:            viper.GetString("app.file.avatar_dir"),
-		DefaultAvatarPath:    viper.GetString("app.file.default_avatar_path"),
+		DefaultAvatarPath:    viper.GetString("app.file.default_avatar_dir"),
 		MaxFileSize:          viper.GetInt64("app.file.max_file_size"),           // 25 GB
 		NormalUserMaxStorage: viper.GetInt64("app.file.normal_user_max_storage"), //100 GB
 		LimitedSpeed:         viper.GetInt64("app.file.limited_speed"),           // 10 MB/s
@@ -178,6 +178,8 @@ func WatchConfig() {
 
 				//展开环境变量
 				expandedContent := os.ExpandEnv(string(configContent))
+
+				//fmt.Println(expandedContent)
 
 				//提取config.yaml
 				if err := viper.ReadConfig(strings.NewReader(expandedContent)); err != nil {

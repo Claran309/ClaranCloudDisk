@@ -1,8 +1,9 @@
 package log
 
 import (
-	"fmt"
+	"errors"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -47,7 +48,7 @@ func (m *MyEncoder) EncodeEntry(entry zapcore.Entry, fields []zapcore.Field) (*b
 	// 自定义前缀数据
 	DataStr := buf.String()
 	buf.Reset()
-	buf.AppendString("[" + m.AppName + "]" + DataStr)
+	buf.AppendString("[" + m.AppName + "] " + DataStr)
 
 	// 时间分片
 	m.writer.mu.Lock()
@@ -62,14 +63,14 @@ func (m *MyEncoder) EncodeEntry(entry zapcore.Entry, fields []zapcore.Field) (*b
 		}
 
 		// 创建新的日志文件
-		newPath := fmt.Sprintf(m.writer.logPath, "/", currentDate)
+		newPath := filepath.Join(m.writer.logPath, "/", currentDate)
 		if err := os.MkdirAll(newPath, 0755); err != nil {
-			return nil, err
+			return nil, errors.New("创建文件夹错误")
 		}
-		filePath := fmt.Sprintf(newPath, currentDate, " INFO")
+		filePath := filepath.Join(newPath, " INFO")
 		file, err := os.OpenFile(filePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644) // 不存在则创建，只写入
 		if err != nil {
-			return nil, err
+			return nil, errors.New("打开文件错误" + filePath)
 		}
 		// 更新writer
 		m.writer.file = file
@@ -78,10 +79,10 @@ func (m *MyEncoder) EncodeEntry(entry zapcore.Entry, fields []zapcore.Field) (*b
 
 	// 如果是err及以下的log_level
 	if entry.Level >= zapcore.ErrorLevel {
-		if m.errFile != nil {
+		if m.errFile == nil {
 			// 创建新的日志文件
-			newPath := fmt.Sprintf(m.writer.logPath, "/", currentDate)
-			filePath := fmt.Sprintf(newPath, currentDate, " ERR")
+			newPath := filepath.Join(m.writer.logPath, "/", currentDate)
+			filePath := filepath.Join(newPath, " ERR")
 			errFile, err := os.OpenFile(filePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644) // 不存在则创建，只写入
 			if err != nil {
 				return nil, err
@@ -100,27 +101,27 @@ func (m *MyEncoder) EncodeEntry(entry zapcore.Entry, fields []zapcore.Field) (*b
 }
 
 // colorEncoder 颜色选择器
-func colorEncoder(level zapcore.Level, enc zapcore.PrimitiveArrayEncoder) {
-	switch level {
-	case zapcore.DebugLevel:
-		enc.AppendString(colorBlue + "Debug" + colorReset)
-	case zapcore.InfoLevel:
-		enc.AppendString(colorGreen + "Info" + colorReset)
-	case zapcore.WarnLevel:
-		enc.AppendString(colorYellow + "Warn" + colorReset)
-	case zapcore.ErrorLevel, zapcore.PanicLevel, zapcore.DPanicLevel, zapcore.FatalLevel:
-		enc.AppendString(colorRed + "Error" + colorReset)
-	default:
-		enc.AppendString(level.String())
-	}
-}
+//func colorEncoder(level zapcore.Level, enc zapcore.PrimitiveArrayEncoder) {
+//	switch level {
+//	case zapcore.DebugLevel:
+//		enc.AppendString(colorBlue + "Debug" + colorReset)
+//	case zapcore.InfoLevel:
+//		enc.AppendString(colorGreen + "Info" + colorReset)
+//	case zapcore.WarnLevel:
+//		enc.AppendString(colorYellow + "Warn" + colorReset)
+//	case zapcore.ErrorLevel, zapcore.PanicLevel, zapcore.DPanicLevel, zapcore.FatalLevel:
+//		enc.AppendString(colorRed + "Error" + colorReset)
+//	default:
+//		enc.AppendString(level.String())
+//	}
+//}
 
 func InitLogManager(appName string, logPath string) {
 	cfg := zap.NewDevelopmentConfig()
 	// 时间格式化配置
 	cfg.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout("2006-01-02 15:04:05")
 	// 颜色配置
-	cfg.EncoderConfig.EncodeLevel = colorEncoder
+	//cfg.EncoderConfig.EncodeLevel = colorEncoder
 
 	// 配置自定义解码器
 	myEncoder := &MyEncoder{

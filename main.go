@@ -10,16 +10,20 @@ import (
 	"ClaranCloudDisk/service"
 	"ClaranCloudDisk/util/jwt_util"
 	"ClaranCloudDisk/util/minIO"
-	"fmt"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 )
 
 func main() {
 	//=====================================初始化配置====================================================
+	godotenv.Load()
 	//cfg := config.LoadConfig()
 	cfg := config.InitConfigByViper()
+	//jsons, _ := json.Marshal(cfg)
+	//fmt.Println(string(jsons))
 	//=====================================初始化日志====================================================
 	log.InitLogManager(cfg.AppName, cfg.LogPath)
 
@@ -32,8 +36,7 @@ func main() {
 		zap.String("dsn", cfg.DSN))
 	db, err := mysql.InitMysql(cfg)
 	if err != nil {
-		zap.L().Error("初始化MySQL失败")
-		zap.L().Fatal(err.Error())
+		zap.S().Fatalf("初始化MySQL失败: %v", err.Error())
 	}
 	// Redis
 	zap.L().Info("开始初始化缓存",
@@ -53,11 +56,11 @@ func main() {
 	zap.L().Info("开始初始化minIO",
 		zap.String("root_name", cfg.MinIO.MinIORootName),
 		zap.String("endpoint", cfg.MinIO.MinIOEndpoint),
-		zap.String("bucket_name", cfg.MinIO.MinIOBucketName))
+		zap.String("bucket_name", cfg.MinIO.MinIOBucketName),
+		zap.String("default_avatar_name", cfg.DefaultAvatarPath))
 	minIOClient, err := minIO.NewMinIOClient(cfg.MinIO.MinIOEndpoint, cfg.MinIO.MinIORootName, cfg.MinIO.MinIOPassword, cfg.MinIO.MinIOBucketName, cfg.DefaultAvatarPath)
 	if err != nil {
-		zap.L().Error("初始化MinIO失败")
-		zap.L().Fatal(err.Error())
+		zap.S().Fatalf("初始化MinIO失败: %v", err.Error())
 	}
 
 	//=====================================初始化依赖===================================================
@@ -172,13 +175,49 @@ func main() {
 	admin.POST("/op/deprive", adminHandler.DepriveAdmin)        // 剥夺用户管理员身份
 	admin.GET("/op", adminHandler.GetAdminList)                 // 获取管理员用户列表
 
-	err = r.Run(fmt.Sprintf(cfg.Host, ":", cfg.Port))
+	err = r.Run(cfg.Host + ":" + strconv.Itoa(cfg.Port))
 	if err != nil {
 		zap.S().Fatal("启动Gin服务失败: %v", err.Error())
 	}
 }
 
 /*
+{"AppName":"ClaranCloudDisk",
+"LogPath":"./log./logs",
+"MaxRequests":0,
+"JWTSecret":"",
+"JWTIssuer":"",
+"JWTExpireHours":0,
+"CloudFileDir":"./CloudFiles",
+"AvatarDIR":"./Avatars",
+"DefaultAvatarPath":"./Avatars/DefaultAvatar/DefaultAvatar.png",
+"MaxFileSize":0,
+"NormalUserMaxStorage":0,
+"LimitedSpeed":0,
+"DSN":"",
+"Redis":{
+	"Addr":"",
+	"Password":"",
+	"DB":0
+},
+"MinIO":{
+"MinIORootName":"",
+"MinIOPassword":"",
+"MinIOEndpoint":"",
+"MinIOBucketName":""
+},
+"Email":{"
+SMTPHost":"",
+"SMTPPort":0,
+"SMTPUser":"",
+"SMTPPass":"",
+"FromName":"",
+"FromEmail":""},
+"Host":"",
+"Port":0
+}
+
+
 results, err := client.Scan("/path/to/file")
 if err != nil {
     // Handle error
