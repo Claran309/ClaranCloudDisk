@@ -19,6 +19,7 @@ import (
 
 func main() {
 	//=====================================初始化配置====================================================
+	// 加载环境变量文件 .env
 	godotenv.Load()
 	//cfg := config.LoadConfig()
 	cfg := config.InitConfigByViper()

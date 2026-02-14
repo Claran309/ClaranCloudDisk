@@ -2279,6 +2279,271 @@ Content-Transfer-Encoding: binary
 - 500: 获取封禁用户列表失败
 
 
+### 5. 获取所有用户列表
+获取系统中所有注册用户的详细列表。
+
+- **URL**: `/admin/user_list`
+- **方法**: `GET`
+- **认证**: 需要 Bearer Token 和 admin 角色权限
+- **Content-Type**: 无
+
+**请求头**:
+
+| 请求头 | 值 | 说明 |
+|--------|----|------|
+| Authorization | Bearer {token} | 访问令牌 |
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "获取用户列表成功",
+  "data": {
+    "users": [
+      {
+        "user_id": 1,
+        "username": "admin_user",
+        "email": "admin@example.com",
+        "role": "admin",
+        "is_vip": true,
+        "is_banned": false,
+        "storage": 5368709120,
+        "generated_invitation_code_num": 10,
+        "avatar": "/avatars/admin_avatar.jpg"
+      },
+      {
+        "user_id": 2,
+        "username": "normal_user",
+        "email": "user@example.com",
+        "role": "user",
+        "is_vip": false,
+        "is_banned": false,
+        "storage": 1073741824,
+        "generated_invitation_code_num": 5,
+        "avatar": "/avatars/user_avatar.jpg"
+      },
+      {
+        "user_id": 3,
+        "username": "banned_user",
+        "email": "banned@example.com",
+        "role": "user",
+        "is_vip": false,
+        "is_banned": true,
+        "storage": 0,
+        "generated_invitation_code_num": 0,
+        "avatar": "/avatars/default.png"
+      }
+    ],
+    "total": 3
+  }
+}
+```
+
+**响应字段说明**:
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| users[].user_id | integer | 用户ID |
+| users[].username | string | 用户名 |
+| users[].email | string | 邮箱地址 |
+| users[].role | string | 用户角色（admin/user） |
+| users[].is_vip | boolean | 是否为VIP用户 |
+| users[].is_banned | boolean | 是否被封禁 |
+| users[].storage | integer | 用户存储空间使用量（字节） |
+| users[].generated_invitation_code_num | integer | 已生成的邀请码数量 |
+| users[].avatar | string | 头像路径 |
+| total | integer | 用户总数 |
+
+**注意**: 返回的用户列表不包含密码字段（密码字段在模型中被标记为`json:"-"`）。
+
+**错误码**:
+- 401: 令牌无效或未登录
+- 403: 无权限（非admin角色）
+- 500: 获取用户列表失败
+
+### 6. 设置用户管理员身份
+将普通用户提升为管理员，赋予其管理权限。
+
+- **URL**: `/admin/op/give`
+- **方法**: `POST`
+- **认证**: 需要 Bearer Token 和 admin 角色权限
+- **Content-Type**: `application/json`
+
+**请求头**:
+
+| 请求头 | 值 | 说明 |
+|--------|----|------|
+| Authorization | Bearer {token} | 访问令牌 |
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 说明 | 示例 |
+|--------|------|------|------|------|
+| user_id | integer | 是 | 要设置为管理员的用户ID | 123 |
+
+**请求体示例**:
+```json
+{
+  "user_id": 123
+}
+```
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "设置用户管理员身份成功",
+  "data": {
+    "userId": 123,
+    "role": "admin"
+  }
+}
+```
+
+**响应字段说明**:
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| userId | integer | 被设置为管理员的用户ID |
+| role | string | 用户当前角色，此处为"admin" |
+
+**错误码**:
+- 400: 请求参数错误
+- 401: 令牌无效或未登录
+- 403: 无权限（非admin角色）
+- 404: 用户不存在
+- 409: 用户已是管理员
+- 500: 设置管理员身份失败
+
+### 7. 剥夺用户管理员身份
+取消用户的管理员权限，将其降级为普通用户。
+
+- **URL**: `/admin/op/deprive`
+- **方法**: `POST`
+- **认证**: 需要 Bearer Token 和 admin 角色权限
+- **Content-Type**: `application/json`
+
+**请求头**:
+
+| 请求头 | 值 | 说明 |
+|--------|----|------|
+| Authorization | Bearer {token} | 访问令牌 |
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 说明 | 示例 |
+|--------|------|------|------|------|
+| user_id | integer | 是 | 要剥夺管理员权限的用户ID | 123 |
+
+**请求体示例**:
+```json
+{
+  "user_id": 123
+}
+```
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "取消用户管理员身份成功",
+  "data": {
+    "userId": 123,
+    "role": "user"
+  }
+}
+```
+
+**响应字段说明**:
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| userId | integer | 被取消管理员权限的用户ID |
+| role | string | 用户当前角色，此处为"user" |
+
+**安全限制**:
+- 不能剥夺自己的管理员权限（防止意外锁定）
+- 系统中必须至少保留一个管理员账号
+
+**错误码**:
+- 400: 请求参数错误
+- 401: 令牌无效或未登录
+- 403: 无权限（非admin角色）或不能剥夺自己的管理员权限
+- 404: 用户不存在
+- 409: 用户不是管理员
+- 500: 取消管理员身份失败
+
+### 8. 获取管理员用户列表
+获取系统中所有拥有管理员权限的用户列表。
+
+- **URL**: `/admin/op`
+- **方法**: `GET`
+- **认证**: 需要 Bearer Token 和 admin 角色权限
+- **Content-Type**: 无
+
+**请求头**:
+
+| 请求头 | 值 | 说明 |
+|--------|----|------|
+| Authorization | Bearer {token} | 访问令牌 |
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "获取op用户列表成功",
+  "data": {
+    "users": [
+      {
+        "user_id": 1,
+        "username": "super_admin",
+        "email": "super@example.com",
+        "role": "admin",
+        "is_vip": true,
+        "is_banned": false,
+        "storage": 10737418240,
+        "generated_invitation_code_num": 20,
+        "avatar": "/avatars/super_admin.jpg"
+      },
+      {
+        "user_id": 123,
+        "username": "admin_user",
+        "email": "admin_user@example.com",
+        "role": "admin",
+        "is_vip": false,
+        "is_banned": false,
+        "storage": 2147483648,
+        "generated_invitation_code_num": 8,
+        "avatar": "/avatars/admin_user.jpg"
+      }
+    ],
+    "total": 2
+  }
+}
+```
+
+**响应字段说明**:
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| users[].user_id | integer | 管理员用户ID |
+| users[].username | string | 管理员用户名 |
+| users[].email | string | 管理员邮箱地址 |
+| users[].role | string | 用户角色，此处均为"admin" |
+| users[].is_vip | boolean | 是否为VIP用户 |
+| users[].is_banned | boolean | 是否被封禁 |
+| users[].storage | integer | 管理员存储空间使用量（字节） |
+| users[].generated_invitation_code_num | integer | 管理员已生成的邀请码数量 |
+| users[].avatar | string | 管理员头像路径 |
+| total | integer | 管理员用户总数 |
+
+**注意**: 此接口返回的用户列表都是具有管理员权限的用户。
+
+**错误码**:
+- 401: 令牌无效或未登录
+- 403: 无权限（非admin角色）
+- 500: 获取管理员列表失败
+
 **注意**: 所有后台管理接口都需要有效的JWT令牌，并且用户角色必须为"admin"。普通用户即使有有效令牌也无法访问这些接口。所有管理操作都会被记录到日志中，便于审计和追溯。
 
 ---
@@ -3031,13 +3296,13 @@ Content-Type: application/json
 ### 后台管理功能说明
 
 #### 用户管理功能
-系统管理员可以对用户账号进行管理：
+系统管理员可以对用户账号进行全面管理：
 
-1. **用户封禁**: 管理员可以封禁违规用户账号，禁止其登录和访问系统
-2. **用户解封**: 管理员可以解除对用户的封禁，恢复其正常使用权限
-3. **封禁列表**: 查看所有被封禁的用户账号，便于管理和审计
-4. **权限控制**: 只有管理员角色的用户才能执行封禁和解封操作
-
+1. **用户查询**: 查看所有注册用户的详细信息
+2. **权限管理**: 设置和撤销用户的管理员权限
+3. **权限审计**: 查看所有管理员用户的列表
+4. **分级管理**: 支持用户角色在"user"和"admin"之间切换
+5. 
 #### 系统监控功能
 管理员可以查看系统整体运行状况：
 

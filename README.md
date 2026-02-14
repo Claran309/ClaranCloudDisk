@@ -6,7 +6,7 @@
 
 初始化邀请码：`"FirstAdminCode"` 
 
-bucket_name不允许大写字母
+`bucket_name`不允许`大写字母`,`recourse_name`不允许`./`
 
 ```
 // fake name
