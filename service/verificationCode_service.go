@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"math/big"
 	"net/smtp"
+	"strconv"
 	"strings"
-	"time"
 
 	"github.com/jordan-wright/email"
 )
@@ -19,24 +19,24 @@ import (
 type VerificationService struct {
 	verificationCache cache.VerificationCodeCache
 	emailConfig       *config.EmailConfig
-	pool              *email.Pool
+	//pool              *email.Pool
 }
 
 func NewVerificationService(verificationCache cache.VerificationCodeCache, emailConfig config.EmailConfig) *VerificationService {
 	// 创建邮件连接池
-	pool, err := email.NewPool(
-		fmt.Sprintf("%s:%d", emailConfig.SMTPHost, emailConfig.SMTPPort),
-		3, // 3x连接
-		smtp.PlainAuth("", emailConfig.SMTPUser, emailConfig.SMTPPass, emailConfig.SMTPHost),
-	)
-	if err != nil {
-		return nil
-	}
+	//pool, err := email.NewPool(
+	//	fmt.Sprintf("%s:%d", emailConfig.SMTPHost, emailConfig.SMTPPort),
+	//	3, // 3x连接
+	//	smtp.PlainAuth("", emailConfig.SMTPUser, emailConfig.SMTPPass, emailConfig.SMTPHost),
+	//)
+	//if err != nil {
+	//	return nil
+	//}
 
 	return &VerificationService{
 		verificationCache: verificationCache,
 		emailConfig:       &emailConfig,
-		pool:              pool,
+		//pool:              pool,
 	}
 }
 
@@ -119,7 +119,7 @@ func (s *VerificationService) VerifyVerificationCode(ctx context.Context, req mo
 
 func (s *VerificationService) SendEmail(ctx context.Context, toEmail, code string) error {
 	// 构建邮件主题
-	subject := fmt.Sprintf("%s验证码", toEmail)
+	subject := fmt.Sprintf("ClaranCloudDisk验证码")
 
 	// 构建邮件内容，前端框架由AI生成
 	htmlContent := fmt.Sprintf(`
@@ -158,5 +158,6 @@ func (s *VerificationService) SendEmail(ctx context.Context, toEmail, code strin
 	e.Text = []byte(fmt.Sprintf("您的验证码是: %s", code))
 
 	// 使用连接池发送
-	return s.pool.Send(e, 10*time.Second)
+	//return s.pool.Send(e, 10*time.Second)
+	return e.Send(s.emailConfig.SMTPHost+":"+strconv.Itoa(s.emailConfig.SMTPPort), smtp.PlainAuth("", s.emailConfig.FromEmail, s.emailConfig.SMTPPass, s.emailConfig.SMTPHost))
 }

@@ -40,7 +40,7 @@ func (s *UserService) Register(req *model.RegisterRequest) (*model.User, *model.
 	//邀请码是否正确
 	invitationCode, err := s.UserRepo.ValidateInvitationCode(req.InviteCode)
 	if err != nil {
-		return nil, nil, errors.New("邀请码不正确")
+		return nil, nil, errors.New("邀请码不正确" + err.Error())
 	}
 
 	//密码时候否符合格式
@@ -180,7 +180,7 @@ func (s *UserService) Logout(token string) error {
 	//加入token黑名单
 	err := s.TokenRepo.AddBlackList(token)
 	if err != nil {
-		return errors.New("add black list failed")
+		return errors.New("add black list failed: " + err.Error())
 	}
 	return nil
 }
@@ -351,7 +351,7 @@ func (s *UserService) UploadAvatar(file *multipart.FileHeader, userID int, userN
 	}
 
 	// 使用username+UID生成唯一文件名
-	fileName := fmt.Sprintf("avatar_%d_%s%s", userName, userID, ext)
+	fileName := fmt.Sprintf("avatar_%d_%s%s", userID, userName, ext)
 
 	//目录
 	userDir := filepath.Join(s.AvatarDIR, fmt.Sprintf("user_%d", userID))
@@ -396,15 +396,15 @@ func (s *UserService) UploadAvatar(file *multipart.FileHeader, userID int, userN
 
 	// 构建访问URL
 	// 因为这个URL是新上传的头像，所以不管之前有没有上传过头像都没关系
-	avatarURL := fmt.Sprintf(s.AvatarDIR, "/user_%d/%s", userID, fileName)
+	//avatarURL := filepath.Join(s.AvatarDIR, fmt.Sprintf("/user_%d/%s", userID, fileName))
 
 	// 将访问URL保存到数据层
-	err = s.UserRepo.UploadAvatar(userID, avatarURL)
+	err = s.UserRepo.UploadAvatar(userID /*avatarURL*/, dstPath)
 	if err != nil {
-		return "", "", "", errors.New("upload database failed")
+		return "", "", "", errors.New("upload database failed: " + err.Error())
 	}
 
-	return avatarURL, fileName, contentType, nil
+	return dstPath, fileName, contentType, nil
 }
 
 func (s *UserService) GetAvatar(userID int) (string, error) {

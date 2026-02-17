@@ -303,6 +303,7 @@ func (h *UserHandler) UploadAvatar(c *gin.Context) {
 	if err != nil {
 		zap.S().Errorf("上传头像失败: %v", err)
 		util.Error(c, 500, "Upload Avatar failed")
+		return
 	}
 
 	zap.L().Info("上传头像请求结束",
@@ -331,7 +332,7 @@ func (h *UserHandler) GetAvatar(c *gin.Context) {
 	avatarPath, err := h.userService.GetAvatar(userID.(int))
 	if err != nil {
 		// 返回默认头像
-		zap.S().Info("用户无头像文件，返回默认头像")
+		zap.S().Info("获取头像失败，返回默认头像: %v", err.Error())
 		avatarPath = h.DefaultAvatarPath
 	}
 
@@ -339,7 +340,7 @@ func (h *UserHandler) GetAvatar(c *gin.Context) {
 	if exist, err := h.minioClient.Exists(c.Request.Context(), avatarPath); err == nil {
 		// 文件不存在，返回默认头像
 		if !exist {
-			zap.S().Info("用户无头像文件，返回默认头像")
+			zap.S().Info("用户无头像文件，返回默认头像: %v", avatarPath)
 			avatarPath = h.DefaultAvatarPath
 		}
 	}

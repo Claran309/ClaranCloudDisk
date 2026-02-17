@@ -45,7 +45,7 @@ func (repo *mysqlTokenRepo) AddBlackList(token string) error {
 		}
 		err := repo.db.Create(&blackList).Error
 		if err != nil {
-			return errors.New("failed to add blacklist")
+			return errors.New("failed to add blacklist:" + err.Error())
 		}
 
 		if repo.cache != nil {
@@ -73,7 +73,7 @@ func (repo *mysqlTokenRepo) CheckBlackList(token string) (string, error) {
 	//未命中，查找数据库
 	var status string
 	var exists int64
-	err := repo.db.Where("token = ?", token).Count(&exists).Error
+	err := repo.db.Model(model.BlackList{}).Where("token = ?", token).Count(&exists).Error
 	if err != nil && exists != 0 {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			//防穿透

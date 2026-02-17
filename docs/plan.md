@@ -68,7 +68,12 @@
   - [x] SQL注入：gorm内部会自动进行参数化处理，并且项目内基本使用了参数化查询，基本没有风险
   - [x] CSRF：正常来说应使用CSRF中间件并进行CSRF Token认证，但是本项目认证方式为通过请求头传递的jwt，不会被CSRF攻击
   - [x] 其他： 添加RateLimited中间件和Security中间件
-- [ ] api测试 - APIFox
+- api测试 - APIFox
+  - [x] 用户部分
+  - [x] 验证码部分
+  - [ ] 文件部分
+  - [ ] 分享部分
+  - [ ] 后台部分
 - [ ] Swagger
 - [ ] vibe 前端 - gemini
 - [ ] 项目本地部署测试

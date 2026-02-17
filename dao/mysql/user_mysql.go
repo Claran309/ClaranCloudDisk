@@ -582,49 +582,52 @@ func (repo *mysqlUserRepo) AddInvitationCodeNum(userID int) error {
 
 func (repo *mysqlUserRepo) ValidateInvitationCode(invitationCode string) (model.InvitationCode, error) {
 	// 缓存
-	if repo.cache != nil {
-		cacheKey := fmt.Sprintf("invitationCode:%s", invitationCode)
-		var InvitationCode model.InvitationCode
-		if err := repo.cache.Get(cacheKey, &InvitationCode); err == nil {
-			if InvitationCode.IsUsed == false {
-				return InvitationCode, nil
-			}
-		}
-	}
+	//if repo.cache != nil {
+	//	cacheKey := fmt.Sprintf("invitationCode:%s", invitationCode)
+	//	var InvitationCode model.InvitationCode
+	//	if err := repo.cache.Get(cacheKey, &InvitationCode); err == nil {
+	//		if InvitationCode.IsUsed == false {
+	//			return InvitationCode, nil
+	//		}
+	//	}
+	//}
 
 	// 数据库
 	var InvitationCode model.InvitationCode
-	err := repo.db.Where("invitation_code = ?", invitationCode).Where("is_used = ?", false).First(&InvitationCode).Error
+	err := repo.db.Where("code = ?", invitationCode).First(&InvitationCode).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			// 防止缓存穿透
-			if repo.cache != nil {
-				cacheKey := fmt.Sprintf("invitationCode:%s", invitationCode)
-				emptyCode := struct{}{}
-				err := repo.cache.Set(cacheKey, emptyCode, 1*time.Minute)
-				if err != nil {
-					return model.InvitationCode{}, errors.New("set cache failed")
-				}
-			}
-			return model.InvitationCode{}, errors.New("email select failed")
-		}
-		return model.InvitationCode{}, errors.New("email select failed")
+		//if errors.Is(err, gorm.ErrRecordNotFound) {
+		//	// 防止缓存穿透
+		//	if repo.cache != nil {
+		//		cacheKey := fmt.Sprintf("invitationCode:%s", invitationCode)
+		//		emptyCode := struct{}{}
+		//		err := repo.cache.Set(cacheKey, emptyCode, 1*time.Minute)
+		//		if err != nil {
+		//			return model.InvitationCode{}, errors.New("set cache failed")
+		//		}
+		//	}
+		//	return model.InvitationCode{}, errors.New("email select failed:" + err.Error())
+		//}
+		return model.InvitationCode{}, errors.New("IC select failed: " + err.Error())
+	}
+	if InvitationCode.IsUsed == true {
+		return model.InvitationCode{}, errors.New("IC already used")
 	}
 
 	//写入缓存
-	if repo.cache != nil {
-		//分布式锁
-		lockKey := fmt.Sprintf("lock:invitationCode:%s", invitationCode)
-		if suc, _ := repo.cache.Lock(lockKey, 10*time.Second); suc {
-			defer repo.cache.Unlock(lockKey)
-
-			CacheKey := fmt.Sprintf("invitationCode:%s", invitationCode)
-			err := repo.cache.Set(CacheKey, &InvitationCode, repo.cache.RandExp(5*time.Minute))
-			if err != nil {
-				return model.InvitationCode{}, errors.New("set cache failed")
-			}
-		}
-	}
+	//if repo.cache != nil {
+	//	//分布式锁
+	//	lockKey := fmt.Sprintf("lock:invitationCode:%s", invitationCode)
+	//	if suc, _ := repo.cache.Lock(lockKey, 10*time.Second); suc {
+	//		defer repo.cache.Unlock(lockKey)
+	//
+	//		CacheKey := fmt.Sprintf("invitationCode:%s", invitationCode)
+	//		err := repo.cache.Set(CacheKey, &InvitationCode, repo.cache.RandExp(5*time.Minute))
+	//		if err != nil {
+	//			return model.InvitationCode{}, errors.New("set cache failed")
+	//		}
+	//	}
+	//}
 
 	return InvitationCode, nil
 }
@@ -633,9 +636,9 @@ func (repo *mysqlUserRepo) CreateInvitationCode(invitationCode model.InvitationC
 	return repo.db.Transaction(func(tx *gorm.DB) error {
 		//写入数据库
 		var invitationCode = model.InvitationCode{
-			UserID: invitationCode.UserID,
-			Code:   invitationCode.Code,
-			IsUsed: false,
+			CreatorUserID: invitationCode.CreatorUserID,
+			Code:          invitationCode.Code,
+			IsUsed:        false,
 		}
 		err := repo.db.Create(&invitationCode).Error
 		if err != nil {
@@ -688,7 +691,8 @@ func (repo *mysqlUserRepo) GetInvitationCodeList(userID int) ([]model.Invitation
 	}
 
 	//查找文件
-	err := repo.db.Where("user_id = ?", userID).
+	err := repo.db.Model(&model.InvitationCode{}).
+		Where("creator_user_id = ?", userID).
 		Order("created_at DESC").
 		Find(&invitationCodes).Error
 	if err != nil {
@@ -702,7 +706,7 @@ func (repo *mysqlUserRepo) UploadAvatar(userID int, url string) error {
 	//数据库
 	return repo.db.Transaction(func(tx *gorm.DB) error {
 		//数据库
-		err := repo.db.Where("user_id = ?", userID).Update("avatar_url", url).Error
+		err := repo.db.Model(model.User{}).Where("user_id = ?", userID).Update("avatar", url).Error
 		if err != nil {
 			return err
 		}
