@@ -14,9 +14,35 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.uber.org/zap"
 )
 
+import _ "ClaranCloudDisk/docs"
+
+// Swagger: http://localhost:8080/swagger/index.html
+
+// @title ClaranCloudDisk
+// @version 1.0
+// @description 云盘管理系统API文档
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name   Claran API Support
+// @contact.url    https://github.com/Claran309
+// @contact.email  claran.ran.away@gmail.com
+
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host localhost:8080
+// @BasePath /
+// @schemes http https
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description JWT认证，格式：Bearer {token}
 func main() {
 	//=====================================初始化配置====================================================
 	// 加载环境变量文件 .env
@@ -91,7 +117,8 @@ func main() {
 	jwtMiddleware := middleware.NewJWTMiddleware(jwtUtil, tokenRepo)
 
 	r := gin.Default()
-
+	//========================================Swagger==================================================
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	//=======================================用户管理路由================================================
 	zap.L().Info("启动路由服务",
 		zap.String("service", "user-service"),

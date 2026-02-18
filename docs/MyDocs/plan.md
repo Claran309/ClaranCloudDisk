@@ -74,17 +74,15 @@
   - [x] 文件部分
   - [x] 分享部分
   - [x] 后台部分
-- [ ] Swagger
+- [x] Swagger
 - [ ] vibe 前端 - gemini
-- [ ] 项目本地部署测试
+- [ ] 项目(带前端)本地部署测试
 - 文档相关
-    - [ ] 项目说明文档
-    - [ ] plan
-    - [ ] api_doc
-    - [ ] swagger
-    - [ ] apiFox文档
-    - [ ] 要求实现文档
-    - [ ] README.md
+    - [x] 项目说明文档
+    - [x] plan
+    - [x] swagger
+    - [x] apiFox文档
+    - [x] README.md
 - [ ] Dockerfile
 - [ ] Docker-compose
 - [ ] Dockerhub

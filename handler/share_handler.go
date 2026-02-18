@@ -26,6 +26,21 @@ func NewShareHandler(shareService *services.ShareService, minIOClient *minIO.Min
 	}
 }
 
+// CreateShare godoc
+// @Summary 创建文件分享
+// @Description 创建文件分享链接，可设置密码和过期时间
+// @Tags 分享管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body model.CreateShareRequest true "创建分享请求参数"
+// @Success 200 {object} map[string]interface{} "创建成功"
+// @Failure 400 {object} map[string]interface{} "请求参数错误"
+// @Failure 401 {object} map[string]interface{} "未授权"
+// @Failure 403 {object} map[string]interface{} "无访问权限"
+// @Failure 404 {object} map[string]interface{} "文件不存在"
+// @Failure 500 {object} map[string]interface{} "服务器内部错误"
+// @Router /share/create [post]
 func (h *ShareHandler) CreateShare(c *gin.Context) {
 	zap.L().Info("创建分享请求开始",
 		zap.String("url", c.Request.RequestURI),
@@ -73,6 +88,16 @@ func (h *ShareHandler) CreateShare(c *gin.Context) {
 	}, "分享创建成功")
 }
 
+// CheckMine godoc
+// @Summary 查看个人分享列表
+// @Description 获取当前登录用户创建的所有分享
+// @Tags 分享管理
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{} "获取成功"
+// @Failure 401 {object} map[string]interface{} "未授权"
+// @Failure 500 {object} map[string]interface{} "服务器内部错误"
+// @Router /share/mine [get]
 func (h *ShareHandler) CheckMine(c *gin.Context) {
 	zap.L().Info("查看个人分享请求开始",
 		zap.String("url", c.Request.RequestURI),
@@ -99,6 +124,19 @@ func (h *ShareHandler) CheckMine(c *gin.Context) {
 	}, "获取成功")
 }
 
+// DeleteShare godoc
+// @Summary 删除分享
+// @Description 删除指定分享链接（只有分享创建者可以删除）
+// @Tags 分享管理
+// @Produce json
+// @Security BearerAuth
+// @Param unique_id path string true "分享唯一ID"
+// @Success 200 {object} map[string]interface{} "删除成功"
+// @Failure 401 {object} map[string]interface{} "未授权"
+// @Failure 403 {object} map[string]interface{} "无权限删除"
+// @Failure 404 {object} map[string]interface{} "分享不存在"
+// @Failure 500 {object} map[string]interface{} "服务器内部错误"
+// @Router /share/{unique_id} [delete]
 func (h *ShareHandler) DeleteShare(c *gin.Context) {
 	zap.L().Info("删除个人分享请求开始",
 		zap.String("url", c.Request.RequestURI),
@@ -123,6 +161,22 @@ func (h *ShareHandler) DeleteShare(c *gin.Context) {
 	util.Success(c, gin.H{}, "删除分享成功")
 }
 
+// GetShareInfo godoc
+// @Summary 查看分享信息
+// @Description 获取分享详细信息，包括文件列表（可能需要密码验证）
+// @Tags 分享管理
+// @Accept multipart/form-data
+// @Produce json
+// @Security BearerAuth
+// @Param unique_id path string true "分享唯一ID"
+// @Param password formData string false "分享密码（如果需要）"
+// @Success 200 {object} map[string]interface{} "获取成功"
+// @Failure 400 {object} map[string]interface{} "请求参数错误"
+// @Failure 401 {object} map[string]interface{} "未授权"
+// @Failure 403 {object} map[string]interface{} "密码错误或无权限"
+// @Failure 404 {object} map[string]interface{} "分享不存在或已过期"
+// @Failure 500 {object} map[string]interface{} "服务器内部错误"
+// @Router /share/{unique_id} [get]
 func (h *ShareHandler) GetShareInfo(c *gin.Context) {
 	zap.L().Info("获取分享信息请求开始",
 		zap.String("url", c.Request.RequestURI),
@@ -160,6 +214,22 @@ func (h *ShareHandler) GetShareInfo(c *gin.Context) {
 	}, "获取分享信息成功")
 }
 
+// DownloadSpecFile godoc
+// @Summary 下载分享中的指定文件
+// @Description 下载分享中的单个文件（支持限速，非VIP用户）
+// @Tags 分享管理
+// @Produce application/octet-stream
+// @Security BearerAuth
+// @Param unique_id path string true "分享唯一ID"
+// @Param file_id path int true "文件ID"
+// @Param password query string false "分享密码"
+// @Success 200 {file} binary "文件流"
+// @Failure 400 {object} map[string]interface{} "请求参数错误"
+// @Failure 401 {object} map[string]interface{} "未授权"
+// @Failure 403 {object} map[string]interface{} "密码错误或无权限"
+// @Failure 404 {object} map[string]interface{} "文件不存在"
+// @Failure 500 {object} map[string]interface{} "服务器内部错误"
+// @Router /share/{unique_id}/{file_id}/download [get]
 func (h *ShareHandler) DownloadSpecFile(c *gin.Context) {
 	zap.L().Info("下载特定文件请求开始",
 		zap.String("url", c.Request.RequestURI),
@@ -343,6 +413,23 @@ func (h *ShareHandler) DownloadSpecFile(c *gin.Context) {
 	//=============================================================================================================
 }
 
+// SaveSpecFile godoc
+// @Summary 转存分享中的文件
+// @Description 将分享中的文件保存到自己的云盘中
+// @Tags 分享管理
+// @Produce json
+// @Security BearerAuth
+// @Param unique_id path string true "分享唯一ID"
+// @Param file_id path int true "文件ID"
+// @Param password query string false "分享密码"
+// @Success 200 {object} map[string]interface{} "转存成功"
+// @Failure 400 {object} map[string]interface{} "请求参数错误"
+// @Failure 401 {object} map[string]interface{} "未授权"
+// @Failure 403 {object} map[string]interface{} "密码错误或无权限"
+// @Failure 404 {object} map[string]interface{} "文件不存在"
+// @Failure 409 {object} map[string]interface{} "文件已存在"
+// @Failure 500 {object} map[string]interface{} "服务器内部错误"
+// @Router /share/{unique_id}/{file_id}/save [post]
 func (h *ShareHandler) SaveSpecFile(c *gin.Context) {
 	zap.L().Info("转存特定文件请求开始",
 		zap.String("url", c.Request.RequestURI),

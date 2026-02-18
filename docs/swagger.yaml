@@ -1,0 +1,2007 @@
+basePath: /
+definitions:
+  model.BanUserRequest:
+    description: 封禁用户所需的请求参数
+    properties:
+      user_id:
+        example: 2
+        type: integer
+    required:
+    - user_id
+    type: object
+  model.CreateShareRequest:
+    type: object
+  model.DepriveAdminRequest:
+    description: 撤销管理员权限所需的请求参数
+    properties:
+      user_id:
+        example: 2
+        type: integer
+    required:
+    - user_id
+    type: object
+  model.GetVerificationCodeRequest:
+    description: 获取邮箱验证码所需的请求参数
+    properties:
+      email:
+        example: john@example.com
+        type: string
+    required:
+    - email
+    type: object
+  model.GiveAdminRequest:
+    description: 授予管理员权限所需的请求参数
+    properties:
+      user_id:
+        example: 2
+        type: integer
+    required:
+    - user_id
+    type: object
+  model.LoginRequest:
+    description: 用户登录所需的请求参数
+    properties:
+      login_key:
+        example: john_doe或john@example.com
+        type: string
+      password:
+        example: password123
+        type: string
+    required:
+    - login_key
+    - password
+    type: object
+  model.LogoutRequest:
+    description: 用户登出所需的请求参数
+    properties:
+      token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+    required:
+    - token
+    type: object
+  model.RecoverUserRequest:
+    description: 恢复被封禁用户所需的请求参数
+    properties:
+      user_id:
+        example: 2
+        type: integer
+    required:
+    - user_id
+    type: object
+  model.RefreshTokenRequest:
+    description: 刷新访问令牌所需的请求参数
+    properties:
+      refresh_token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+    required:
+    - refresh_token
+    type: object
+  model.RegisterRequest:
+    description: 用户注册所需的请求参数
+    properties:
+      email:
+        example: john@example.com
+        type: string
+      invite_code:
+        example: INVITE123
+        type: string
+      password:
+        example: password123
+        type: string
+      username:
+        example: john_doe
+        type: string
+    required:
+    - email
+    - invite_code
+    - password
+    - username
+    type: object
+  model.RenameRequest:
+    description: 重命名文件所需的请求参数
+    properties:
+      name:
+        example: new_filename.txt
+        type: string
+    required:
+    - name
+    type: object
+  model.SearchFileRequest:
+    description: 搜索文件所需的请求参数
+    properties:
+      keywords:
+        example: 文档
+        type: string
+    required:
+    - keywords
+    type: object
+  model.UpdateRequest:
+    description: 更新用户信息所需的请求参数
+    properties:
+      email:
+        example: new_john@example.com
+        type: string
+      is_vip:
+        example: true
+        type: boolean
+      password:
+        example: newpassword123
+        type: string
+      role:
+        enum:
+        - admin
+        - user
+        example: admin
+        type: string
+      username:
+        example: new_john_doe
+        type: string
+    type: object
+  model.VerifyVerificationCodeRequest:
+    description: 验证邮箱验证码所需的请求参数
+    properties:
+      code:
+        example: "123456"
+        type: string
+      email:
+        example: john@example.com
+        type: string
+    required:
+    - code
+    - email
+    type: object
+  util.Response:
+    description: 通用API响应格式
+    properties:
+      data:
+        description: 数据
+      message:
+        description: 消息
+        example: success
+        type: string
+      status:
+        description: 状态码
+        example: 200
+        type: integer
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: claran.ran.away@gmail.com
+    name: Claran API Support
+    url: https://github.com/Claran309
+  description: 云盘管理系统API文档
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: ClaranCloudDisk
+  version: "1.0"
+paths:
+  /admin/ban_user:
+    post:
+      consumes:
+      - application/json
+      description: 管理员封禁指定用户
+      parameters:
+      - description: 封禁用户请求参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.BanUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 封禁成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 无管理员权限
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 用户不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 封禁用户
+      tags:
+      - 后台管理
+  /admin/ban_user/list:
+    get:
+      description: 管理员获取所有被封禁的用户列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 无管理员权限
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取封禁用户列表
+      tags:
+      - 后台管理
+  /admin/ban_user/recover:
+    post:
+      consumes:
+      - application/json
+      description: 管理员解封已封禁的用户
+      parameters:
+      - description: 解封用户请求参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.RecoverUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 解封成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 无管理员权限
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 用户不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 解封用户
+      tags:
+      - 后台管理
+  /admin/info:
+    get:
+      description: 管理员获取系统的总用户数和总存储空间信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 无管理员权限
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取系统总资源信息
+      tags:
+      - 后台管理
+  /admin/op:
+    get:
+      description: 管理员获取所有管理员用户列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 无管理员权限
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取管理员用户列表
+      tags:
+      - 后台管理
+  /admin/op/deprive:
+    post:
+      consumes:
+      - application/json
+      description: 撤销用户的管理员权限
+      parameters:
+      - description: 撤销管理员权限请求参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.DepriveAdminRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 撤销成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 无管理员权限
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 用户不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 撤销管理员权限
+      tags:
+      - 后台管理
+  /admin/op/give:
+    post:
+      consumes:
+      - application/json
+      description: 授予用户管理员权限
+      parameters:
+      - description: 授予管理员权限请求参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.GiveAdminRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 授权成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 无管理员权限
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 用户不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 授予管理员权限
+      tags:
+      - 后台管理
+  /admin/user_list:
+    get:
+      description: 管理员获取系统中的所有用户列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 无管理员权限
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取所有用户列表
+      tags:
+      - 后台管理
+  /file/{id}:
+    get:
+      description: 获取指定文件的详细信息
+      parameters:
+      - description: 文件ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 无访问权限
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 文件不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取文件详细信息
+      tags:
+      - 文件管理
+  /file/{id}/Unstar:
+    post:
+      description: 取消收藏指定文件
+      parameters:
+      - description: 文件ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 取消收藏成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 无访问权限
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 文件不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 取消收藏文件
+      tags:
+      - 文件管理
+  /file/{id}/delete/recovery:
+    put:
+      description: 从回收站恢复已软删除的文件
+      parameters:
+      - description: 文件ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 恢复成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 无访问权限
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 文件不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 恢复文件
+      tags:
+      - 文件管理
+  /file/{id}/delete/soft:
+    put:
+      description: 将文件移至回收站（软删除）
+      parameters:
+      - description: 文件ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 软删除成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 无访问权限
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 文件不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 软删除文件
+      tags:
+      - 文件管理
+  /file/{id}/delete/tough:
+    delete:
+      description: 永久删除指定文件
+      parameters:
+      - description: 文件ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 无访问权限
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 文件不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 直接删除文件
+      tags:
+      - 文件管理
+  /file/{id}/download:
+    get:
+      description: 下载文件，支持限速（非VIP用户）
+      parameters:
+      - description: 文件ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: 文件流
+          schema:
+            type: file
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 无访问权限
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 文件不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 下载文件
+      tags:
+      - 文件管理
+  /file/{id}/preview:
+    get:
+      description: 预览指定文件（支持图片、视频、音频、文档等多种格式）
+      parameters:
+      - description: 文件ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: 文件预览
+          schema:
+            type: file
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 无访问权限
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 文件不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "415":
+          description: 不支持的文件类型
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 预览文件
+      tags:
+      - 文件管理
+  /file/{id}/preview_info:
+    get:
+      description: 获取指定文件的预览信息，包括文件类型、MIME类型、是否可以预览等
+      parameters:
+      - description: 文件ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 无访问权限
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 文件不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取文件预览信息
+      tags:
+      - 文件管理
+  /file/{id}/rename:
+    put:
+      consumes:
+      - application/json
+      description: 重命名指定文件
+      parameters:
+      - description: 文件ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 重命名请求参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.RenameRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 重命名成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 无访问权限
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 文件不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 重命名文件
+      tags:
+      - 文件管理
+  /file/{id}/star:
+    post:
+      description: 收藏指定文件
+      parameters:
+      - description: 文件ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 收藏成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 无访问权限
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 文件不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 收藏文件
+      tags:
+      - 文件管理
+  /file/bin:
+    get:
+      description: 获取当前登录用户回收站中的文件列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取回收站文件列表
+      tags:
+      - 文件管理
+  /file/chunk_upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 分片上传大文件，支持断点续传
+      parameters:
+      - description: 文件分片
+        in: formData
+        name: chunk
+        required: true
+        type: file
+      - description: 分片索引（从0开始）
+        in: formData
+        name: chunk_index
+        required: true
+        type: integer
+      - description: 总分片数
+        in: formData
+        name: chunk_total
+        required: true
+        type: integer
+      - description: 文件哈希值
+        in: formData
+        name: file_hash
+        required: true
+        type: string
+      - description: 文件名
+        in: formData
+        name: file_name
+        required: true
+        type: string
+      - description: 文件MIME类型
+        in: formData
+        name: file_mime_type
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 文件上传完成
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 分片上传文件
+      tags:
+      - 文件管理
+  /file/chunk_upload/status:
+    get:
+      consumes:
+      - multipart/form-data
+      description: 查询文件分片上传的进度状态，用于断点续传
+      parameters:
+      - description: 文件哈希值
+        in: formData
+        name: file_hash
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 查询成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取分片上传状态
+      tags:
+      - 文件管理
+  /file/list:
+    get:
+      description: 获取当前登录用户的文件列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取文件列表
+      tags:
+      - 文件管理
+  /file/search:
+    post:
+      consumes:
+      - application/json
+      description: 在当前用户的文件中搜索指定关键词
+      parameters:
+      - description: 搜索请求参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.SearchFileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 搜索成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 搜索文件
+      tags:
+      - 文件管理
+  /file/star_list:
+    get:
+      description: 获取当前登录用户的收藏文件列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取收藏文件列表
+      tags:
+      - 文件管理
+  /file/upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 上传单个文件到云盘
+      parameters:
+      - description: 文件
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 上传成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "413":
+          description: 文件太大
+          schema:
+            additionalProperties: true
+            type: object
+        "415":
+          description: 不支持的文件类型
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 上传文件
+      tags:
+      - 文件管理
+  /share/{unique_id}:
+    delete:
+      description: 删除指定分享链接（只有分享创建者可以删除）
+      parameters:
+      - description: 分享唯一ID
+        in: path
+        name: unique_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 无权限删除
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 分享不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 删除分享
+      tags:
+      - 分享管理
+    get:
+      consumes:
+      - multipart/form-data
+      description: 获取分享详细信息，包括文件列表（可能需要密码验证）
+      parameters:
+      - description: 分享唯一ID
+        in: path
+        name: unique_id
+        required: true
+        type: string
+      - description: 分享密码（如果需要）
+        in: formData
+        name: password
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 密码错误或无权限
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 分享不存在或已过期
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 查看分享信息
+      tags:
+      - 分享管理
+  /share/{unique_id}/{file_id}/download:
+    get:
+      description: 下载分享中的单个文件（支持限速，非VIP用户）
+      parameters:
+      - description: 分享唯一ID
+        in: path
+        name: unique_id
+        required: true
+        type: string
+      - description: 文件ID
+        in: path
+        name: file_id
+        required: true
+        type: integer
+      - description: 分享密码
+        in: query
+        name: password
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: 文件流
+          schema:
+            type: file
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 密码错误或无权限
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 文件不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 下载分享中的指定文件
+      tags:
+      - 分享管理
+  /share/{unique_id}/{file_id}/save:
+    post:
+      description: 将分享中的文件保存到自己的云盘中
+      parameters:
+      - description: 分享唯一ID
+        in: path
+        name: unique_id
+        required: true
+        type: string
+      - description: 文件ID
+        in: path
+        name: file_id
+        required: true
+        type: integer
+      - description: 分享密码
+        in: query
+        name: password
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 转存成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 密码错误或无权限
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 文件不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: 文件已存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 转存分享中的文件
+      tags:
+      - 分享管理
+  /share/create:
+    post:
+      consumes:
+      - application/json
+      description: 创建文件分享链接，可设置密码和过期时间
+      parameters:
+      - description: 创建分享请求参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateShareRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 创建成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 无访问权限
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 文件不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 创建文件分享
+      tags:
+      - 分享管理
+  /share/mine:
+    get:
+      description: 获取当前登录用户创建的所有分享
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 查看个人分享列表
+      tags:
+      - 分享管理
+  /user/{id}/get_avatar:
+    get:
+      description: 根据用户ID获取用户的头像
+      parameters:
+      - description: 用户ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - image/jpeg
+      - image/png
+      - image/gif
+      - image/webp
+      - image/*
+      responses:
+        "200":
+          description: 头像文件
+          schema:
+            type: file
+        "400":
+          description: 用户ID无效
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 用户不存在或头像不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 获取指定用户头像
+      tags:
+      - 用户管理
+  /user/generate_invitation_code:
+    get:
+      consumes:
+      - application/json
+      description: 为当前登录用户生成一个新的邀请码
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 生成成功
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 生成邀请码
+      tags:
+      - 用户管理
+  /user/get_avatar:
+    get:
+      description: 获取当前登录用户的头像
+      produces:
+      - image/jpeg
+      - image/png
+      - image/gif
+      - image/webp
+      - image/*
+      responses:
+        "200":
+          description: 头像文件
+          schema:
+            type: file
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 头像不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取当前用户头像
+      tags:
+      - 用户管理
+  /user/get_verification_code:
+    post:
+      consumes:
+      - application/json
+      description: 向指定邮箱发送验证码
+      parameters:
+      - description: 获取验证码请求参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.GetVerificationCodeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 验证码发送成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "429":
+          description: 请求过于频繁
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 获取邮箱验证码
+      tags:
+      - 用户管理
+  /user/info:
+    get:
+      consumes:
+      - application/json
+      description: 获取当前登录用户的个人信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取个人信息
+      tags:
+      - 用户管理
+  /user/invitation_code_list:
+    get:
+      consumes:
+      - application/json
+      description: 获取当前登录用户生成的所有邀请码列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取邀请码列表
+      tags:
+      - 用户管理
+  /user/login:
+    post:
+      consumes:
+      - application/json
+      description: 用户登录接口，返回访问令牌和刷新令牌
+      parameters:
+      - description: 登录请求参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 登录成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 用户登录
+      tags:
+      - 用户管理
+  /user/logout:
+    post:
+      consumes:
+      - application/json
+      description: 用户登出，使当前令牌失效
+      parameters:
+      - description: 登出请求参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.LogoutRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 登出成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 用户登出
+      tags:
+      - 用户管理
+  /user/refresh:
+    post:
+      consumes:
+      - application/json
+      description: 使用刷新令牌获取新的访问令牌
+      parameters:
+      - description: 刷新令牌请求参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 刷新成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 刷新访问令牌
+      tags:
+      - 用户管理
+  /user/register:
+    post:
+      consumes:
+      - application/json
+      description: 用户注册接口，创建新用户账号
+      parameters:
+      - description: 注册请求参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 注册成功
+          schema:
+            $ref: '#/definitions/util.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/util.Response'
+        "409":
+          description: 用户名或邮箱已存在
+          schema:
+            $ref: '#/definitions/util.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/util.Response'
+      summary: 用户注册
+      tags:
+      - 用户管理
+  /user/update:
+    put:
+      consumes:
+      - application/json
+      description: 更新当前登录用户的个人信息
+      parameters:
+      - description: 更新用户信息请求参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 更新用户信息
+      tags:
+      - 用户管理
+  /user/upload_avatar:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 上传当前登录用户的头像文件
+      parameters:
+      - description: 头像文件
+        in: formData
+        name: avatar
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 上传成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+        "413":
+          description: 文件太大
+          schema:
+            additionalProperties: true
+            type: object
+        "415":
+          description: 不支持的文件类型
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 上传头像
+      tags:
+      - 用户管理
+  /user/verify_verification_code:
+    post:
+      consumes:
+      - application/json
+      description: 验证邮箱接收到的验证码
+      parameters:
+      - description: 验证验证码请求参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.VerifyVerificationCodeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 验证成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误或验证码错误
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 验证邮箱验证码
+      tags:
+      - 用户管理
+schemes:
+- http
+- https
+securityDefinitions:
+  BearerAuth:
+    description: JWT认证，格式：Bearer {token}
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
