@@ -1,0 +1,148 @@
+version: '3.8'
+
+services:
+  # 主应用服务
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: claran-cloud-disk-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT}:8080"
+    environment:
+      # 应用配置
+      APP_NAME: ${APP_NAME}
+      APP_HOST: 0.0.0.0
+      APP_PORT: 8080
+      APP_ENV: ${APP_ENV}
+      CLOUD_FILE_DIR: ${CLOUD_FILE_DIR}
+      AVATAR_DIR: ${AVATAR_DIR}
+      DEFAULT_AVATAR_PATH: ${DEFAULT_AVATAR_PATH}
+      MAX_FILE_SIZE: ${MAX_FILE_SIZE}
+      NORMAL_USER_MAX_STORAGE: ${NORMAL_USER_MAX_STORAGE}
+      LIMITED_SPEED: ${LIMITED_SPEED}
+      LOG_PATH: /app/logs
+      MAX_REQUESTS_EVERY_MINUTE: ${MAX_REQUESTS_EVERY_MINUTE}
+
+      # JWT配置
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      ISSUER: ${ISSUER}
+      EXP_TIME_HOURS: ${EXP_TIME_HOURS}
+
+      # 数据库配置
+      DB_DSN: ${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(mysql:3306)/${MYSQL_DATABASE}?charset=utf8mb4&parseTime=True&loc=Local
+
+      # Redis配置
+      REDIS_ADDR: redis:6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_DB: ${REDIS_DB}
+
+      # MinIO配置
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_ENDPOINT: minio:9000
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME}
+
+      # 邮箱配置
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      FROM_NAME: ${FROM_NAME}
+      FROM_EMAIL: ${FROM_EMAIL}
+    volumes:
+      - app-logs:/app/logs
+      - app-data:/app/data
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      minio:
+        condition: service_started
+    networks:
+      - cloud-disk-network
+
+  # MySQL服务
+  mysql:
+    image: mysql:8.0
+    container_name: claran-cloud-disk-mysql
+    restart: unless-stopped
+    ports:
+      - "${MYSQL_PORT}:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./init-db:/docker-entrypoint-initdb.d
+    networks:
+      - cloud-disk-network
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # Redis服务
+  redis:
+    image: redis:7.2-alpine
+    container_name: claran-cloud-disk-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT}:6379"
+    command:
+      - redis-server
+      - --requirepass ${REDIS_PASSWORD}
+      - --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - cloud-disk-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--pass", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # MinIO服务
+  minio:
+    image: minio/minio:latest
+    container_name: claran-cloud-disk-minio
+    restart: unless-stopped
+    ports:
+      - "${MINIO_API_PORT}:9000"
+      - "${MINIO_CONSOLE_PORT}:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_BROWSER_REDIRECT_URL: http://localhost:${MINIO_CONSOLE_PORT}
+    volumes:
+      - minio-data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - cloud-disk-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+volumes:
+  mysql-data:
+  redis-data:
+  minio-data:
+  app-logs:
+  app-data:
+
+networks:
+  cloud-disk-network:
+    driver: bridge
+    name: claran-cloud-disk-network

@@ -75,8 +75,6 @@
   - [x] 分享部分
   - [x] 后台部分
 - [x] Swagger
-- [ ] vibe 前端 - gemini
-- [ ] 项目(带前端)本地部署测试
 - 文档相关
     - [x] 项目说明文档
     - [x] plan
@@ -85,4 +83,5 @@
     - [x] README.md
 - [ ] Dockerfile
 - [ ] Docker-compose
-- [ ] Dockerhub
+- [ ] vibe 前端 - gemini
+- [ ] 项目(带前端)本地部署测试 
