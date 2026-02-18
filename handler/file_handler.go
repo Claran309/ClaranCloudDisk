@@ -174,6 +174,7 @@ func (h *FileHandler) ChunkUpload(c *gin.Context) {
 			"mime_type":  file.MimeType,
 			"created_at": file.CreatedAt,
 		}, "文件上传成功")
+		return
 	}
 
 	zap.L().Info("上传分片请求结束",
@@ -195,7 +196,7 @@ func (h *FileHandler) GetChunkStatus(c *gin.Context) {
 		zap.String("method", c.Request.Method),
 		zap.String("client_ip", c.ClientIP()))
 	//捕获数据
-	fileHash := c.Query("file_hash")
+	fileHash := c.PostForm("file_hash")
 	if fileHash == "" {
 		zap.S().Errorf("缺少filehash参数")
 		util.Error(c, 500, "缺少fileHash参数")
@@ -569,7 +570,7 @@ func (h *FileHandler) Unstar(c *gin.Context) {
 	// 响应
 	util.Success(c, gin.H{
 		"file": file,
-	}, "收藏成功")
+	}, "取消收藏成功")
 }
 
 // Rename /:id/rename
@@ -822,112 +823,112 @@ func (h *FileHandler) PreText(c *gin.Context, file *model.File) {
 
 }
 
+//func (h *FileHandler) GetContent(c *gin.Context) {
+//	zap.L().Info("获取文件预览内容请求开始",
+//		zap.String("url", c.Request.RequestURI),
+//		zap.String("method", c.Request.Method),
+//		zap.String("client_ip", c.ClientIP()))
+//	// 捕获数据
+//	userID := c.GetInt("user_id")
+//	fileID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+//	if err != nil {
+//		zap.S().Errorf("无效的文件ID: %v", err)
+//		util.Error(c, 400, "无效的文件ID")
+//		return
+//	}
+//
+//	// 调用服务层获取文件信息
+//	ctx := c.Request.Context()
+//	file, err := h.fileService.GetFileInfo(ctx, userID, fileID)
+//	if err != nil {
+//		zap.S().Errorf("文件不存在或无权限访问: %v", err)
+//		util.Error(c, 404, "文件不存在或无权访问: "+err.Error())
+//		return
+//	}
+//
+//	exist, err := h.minioClient.Exists(c, file.Path)
+//	if err != nil || !exist {
+//		zap.S().Errorf("文件已丢失: %v", err)
+//		util.Error(c, 404, "文件已丢失")
+//		return
+//	}
+//	//=============================================================================================================
+//	// 检查文件是否存在
+//	//if _, err := os.Stat(file.Path); os.IsNotExist(err) {
+//	//	util.Error(c, 404, "文件已丢失")
+//	//	return
+//	//}
+//	//=============================================================================================================
+//
+//	//服务层获取文件类型
+//	fileType, err := h.fileService.GetMimeType(ctx, file)
+//	if err != nil {
+//		zap.S().Errorf("”获取文件类型失败: %v", err)
+//		util.Error(c, 500, "获取文件类型失败: "+err.Error())
+//		return
+//	}
+//	if fileType == "document" {
+//		fileType = "application"
+//	}
+//	//修改响应头
+//	ext := file.Ext
+//	if ext == "svg" {
+//		ext = "svg+xml"
+//	}
+//	if ext == "mov" {
+//		ext = "quicktime"
+//	}
+//	if ext == "avi" {
+//		ext = "x-msvideo"
+//	}
+//	if ext == "mkv" {
+//		ext = "x-matroska"
+//	}
+//	if ext == "mp3" {
+//		ext = "mpeg"
+//	}
+//	if ext == "docx" {
+//		ext = "vnd.openxmlformats-officedocument.wordprocessingml.document"
+//	}
+//	if ext == "doc" {
+//		ext = "msword"
+//	}
+//	if ext == "xls" {
+//		ext = "vnd.ms-excel"
+//	}
+//	if ext == "xlsx" {
+//		ext = "vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+//	}
+//	if ext == "ppt" {
+//		ext = "vnd.ms-powerpoint"
+//	}
+//	if ext == "pptx" {
+//		ext = "vnd.openxmlformats-officedocument.presentationml.presentation"
+//	}
+//	if ext == "txt" {
+//		ext = "plain"
+//	}
+//	if ext == "js" {
+//		ext = "javascript"
+//	}
+//	if ext == "md" {
+//		ext = "markdown"
+//	}
+//	MimeType := fileType + "/" + ext
+//	// 设置响应头
+//	c.Header("Content-Type", MimeType)
+//	c.Header("Accept-Ranges", "bytes")
+//
+//	zap.L().Info("获取文件预览内容请求结束",
+//		zap.String("url", c.Request.RequestURI),
+//		zap.String("method", c.Request.Method),
+//		zap.String("client_ip", c.ClientIP()))
+//
+//	// 让Gin处理Range请求
+//	c.File(file.Path)
+//}
+
 func (h *FileHandler) GetPreInfo(c *gin.Context) {
-	zap.L().Info("获取文件预览内容请求开始",
-		zap.String("url", c.Request.RequestURI),
-		zap.String("method", c.Request.Method),
-		zap.String("client_ip", c.ClientIP()))
-	// 捕获数据
-	userID := c.GetInt("user_id")
-	fileID, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
-		zap.S().Errorf("无效的文件ID: %v", err)
-		util.Error(c, 400, "无效的文件ID")
-		return
-	}
-
-	// 调用服务层获取文件信息
-	ctx := c.Request.Context()
-	file, err := h.fileService.GetFileInfo(ctx, userID, fileID)
-	if err != nil {
-		zap.S().Errorf("文件不存在或无权限访问: %v", err)
-		util.Error(c, 404, "文件不存在或无权访问: "+err.Error())
-		return
-	}
-
-	exist, err := h.minioClient.Exists(c, file.Path)
-	if err != nil || !exist {
-		zap.S().Errorf("文件已丢失: %v", err)
-		util.Error(c, 404, "文件已丢失")
-		return
-	}
-	//=============================================================================================================
-	// 检查文件是否存在
-	//if _, err := os.Stat(file.Path); os.IsNotExist(err) {
-	//	util.Error(c, 404, "文件已丢失")
-	//	return
-	//}
-	//=============================================================================================================
-
-	//服务层获取文件类型
-	fileType, err := h.fileService.GetMimeType(ctx, file)
-	if err != nil {
-		zap.S().Errorf("”获取文件类型失败: %v", err)
-		util.Error(c, 500, "获取文件类型失败: "+err.Error())
-		return
-	}
-	if fileType == "document" {
-		fileType = "application"
-	}
-	//修改响应头
-	ext := file.Ext
-	if ext == "svg" {
-		ext = "svg+xml"
-	}
-	if ext == "mov" {
-		ext = "quicktime"
-	}
-	if ext == "avi" {
-		ext = "x-msvideo"
-	}
-	if ext == "mkv" {
-		ext = "x-matroska"
-	}
-	if ext == "mp3" {
-		ext = "mpeg"
-	}
-	if ext == "docx" {
-		ext = "vnd.openxmlformats-officedocument.wordprocessingml.document"
-	}
-	if ext == "doc" {
-		ext = "msword"
-	}
-	if ext == "xls" {
-		ext = "vnd.ms-excel"
-	}
-	if ext == "xlsx" {
-		ext = "vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-	}
-	if ext == "ppt" {
-		ext = "vnd.ms-powerpoint"
-	}
-	if ext == "pptx" {
-		ext = "vnd.openxmlformats-officedocument.presentationml.presentation"
-	}
-	if ext == "txt" {
-		ext = "plain"
-	}
-	if ext == "js" {
-		ext = "javascript"
-	}
-	if ext == "md" {
-		ext = "markdown"
-	}
-	MimeType := fileType + "/" + ext
-	// 设置响应头
-	c.Header("Content-Type", MimeType)
-	c.Header("Accept-Ranges", "bytes")
-
-	zap.L().Info("获取文件预览内容请求结束",
-		zap.String("url", c.Request.RequestURI),
-		zap.String("method", c.Request.Method),
-		zap.String("client_ip", c.ClientIP()))
-
-	// 让Gin处理Range请求
-	c.File(file.Path)
-}
-
-func (h *FileHandler) GetContent(c *gin.Context) {
 	zap.L().Info("获取文件预览信息请求开始",
 		zap.String("url", c.Request.RequestURI),
 		zap.String("method", c.Request.Method),
@@ -1078,6 +1079,7 @@ func (h *FileHandler) SoftDelete(c *gin.Context) {
 	if err != nil {
 		zap.S().Errorf("转换FileID失败: %v", err)
 		util.Error(c, 400, err.Error())
+		return
 	}
 
 	//服务层
@@ -1085,6 +1087,7 @@ func (h *FileHandler) SoftDelete(c *gin.Context) {
 	if err != nil {
 		zap.S().Errorf("软删除文件失败: %v", err)
 		util.Error(c, 400, err.Error())
+		return
 	}
 
 	zap.L().Info("软删除文件请求结束",

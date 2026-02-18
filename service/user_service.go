@@ -126,6 +126,11 @@ func (s *UserService) Login(loginKey, password string) (string, *model.User, err
 		return "", nil, errors.New("username Not Exist"), ""
 	}
 
+	user, _ = s.UserRepo.SelectByUsername(user.Username)
+	if user.IsBanned == true {
+		return "", nil, errors.New("用户已被封禁"), ""
+	}
+
 	//检验密码正确性
 	if !util.CheckPassword(user.Password, password) {
 		return "", nil, errors.New("password error"), ""

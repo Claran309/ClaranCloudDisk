@@ -73,6 +73,17 @@ func (repo *mysqlUserRepo) AddUser(user *model.User) error {
 			if err != nil {
 				return errors.New("set cache failed")
 			}
+
+			cacheKey1 := fmt.Sprintf("users")
+			cacheKey2 := fmt.Sprintf("admin_users")
+			err = repo.cache.Clean(cacheKey1)
+			if err != nil {
+				return errors.New("set cache failed")
+			}
+			err = repo.cache.Clean(cacheKey2)
+			if err != nil {
+				return errors.New("set cache failed")
+			}
 		}
 
 		return nil
@@ -416,6 +427,17 @@ func (repo *mysqlUserRepo) UpdateUsername(userID int, username string) error {
 			return errors.New("delete user failed")
 		}
 
+		cacheKey1 := fmt.Sprintf("users")
+		cacheKey2 := fmt.Sprintf("admin_users")
+		err = repo.cache.Clean(cacheKey1)
+		if err != nil {
+			return errors.New("set cache failed")
+		}
+		err = repo.cache.Clean(cacheKey2)
+		if err != nil {
+			return errors.New("set cache failed")
+		}
+
 		return nil
 	})
 }
@@ -446,6 +468,17 @@ func (repo *mysqlUserRepo) UpdatePassword(userID int, password string) error {
 		err = repo.cache.Delete(fmt.Sprintf("user:email:%s", user.Email))
 		if err != nil {
 			return errors.New("delete user failed")
+		}
+
+		cacheKey1 := fmt.Sprintf("users")
+		cacheKey2 := fmt.Sprintf("admin_users")
+		err = repo.cache.Clean(cacheKey1)
+		if err != nil {
+			return errors.New("set cache failed")
+		}
+		err = repo.cache.Clean(cacheKey2)
+		if err != nil {
+			return errors.New("set cache failed")
 		}
 
 		return nil
@@ -480,6 +513,17 @@ func (repo *mysqlUserRepo) UpdateEmail(userID int, email string) error {
 			return errors.New("delete user failed")
 		}
 
+		cacheKey1 := fmt.Sprintf("users")
+		cacheKey2 := fmt.Sprintf("admin_users")
+		err = repo.cache.Clean(cacheKey1)
+		if err != nil {
+			return errors.New("set cache failed")
+		}
+		err = repo.cache.Clean(cacheKey2)
+		if err != nil {
+			return errors.New("set cache failed")
+		}
+
 		return nil
 	})
 }
@@ -510,6 +554,17 @@ func (repo *mysqlUserRepo) UpdateRole(userID int, role string) error {
 		err = repo.cache.Delete(fmt.Sprintf("user:email:%s", user.Email))
 		if err != nil {
 			return errors.New("delete user failed")
+		}
+
+		cacheKey1 := fmt.Sprintf("users")
+		cacheKey2 := fmt.Sprintf("admin_users")
+		err = repo.cache.Clean(cacheKey1)
+		if err != nil {
+			return errors.New("set cache failed")
+		}
+		err = repo.cache.Clean(cacheKey2)
+		if err != nil {
+			return errors.New("set cache failed")
 		}
 
 		return nil
@@ -544,6 +599,17 @@ func (repo *mysqlUserRepo) UpdateStorage(userID int, storage int64) error {
 			return errors.New("delete user failed")
 		}
 
+		cacheKey1 := fmt.Sprintf("users")
+		cacheKey2 := fmt.Sprintf("admin_users")
+		err = repo.cache.Clean(cacheKey1)
+		if err != nil {
+			return errors.New("set cache failed")
+		}
+		err = repo.cache.Clean(cacheKey2)
+		if err != nil {
+			return errors.New("set cache failed")
+		}
+
 		return nil
 	})
 }
@@ -574,6 +640,17 @@ func (repo *mysqlUserRepo) AddInvitationCodeNum(userID int) error {
 		err = repo.cache.Delete(fmt.Sprintf("user:email:%s", user.Email))
 		if err != nil {
 			return errors.New("delete user failed")
+		}
+
+		cacheKey1 := fmt.Sprintf("users")
+		cacheKey2 := fmt.Sprintf("admin_users")
+		err = repo.cache.Clean(cacheKey1)
+		if err != nil {
+			return errors.New("set cache failed")
+		}
+		err = repo.cache.Clean(cacheKey2)
+		if err != nil {
+			return errors.New("set cache failed")
 		}
 
 		return nil
@@ -873,7 +950,10 @@ func (repo *mysqlUserRepo) BanUser(userID int) error {
 		if err != nil {
 			return errors.New("delete user failed")
 		}
-
+		err = repo.cache.Clean("banned_users")
+		if err != nil {
+			return errors.New("delete user failed")
+		}
 		return nil
 	})
 }
@@ -905,6 +985,10 @@ func (repo *mysqlUserRepo) RecoverUser(userID int) error {
 		if err != nil {
 			return errors.New("delete user failed")
 		}
+		err = repo.cache.Clean("banned_users")
+		if err != nil {
+			return errors.New("delete user failed")
+		}
 
 		return nil
 	})
@@ -914,8 +998,9 @@ func (repo *mysqlUserRepo) GetBannedUsers() ([]model.User, int64, error) {
 	//缓存
 	if repo.cache != nil {
 		cacheKey := fmt.Sprintf("banned_users")
+		exist := repo.cache.Exists(cacheKey)
 		jsonDatas, err := repo.cache.SMembers(cacheKey)
-		if err == nil {
+		if err == nil && exist {
 			var users []model.User
 			for _, jsonData := range jsonDatas {
 				var user model.User
@@ -930,7 +1015,7 @@ func (repo *mysqlUserRepo) GetBannedUsers() ([]model.User, int64, error) {
 
 	//数据库
 	var users []model.User
-	err := repo.db.Where("is_banned = ?", true).First(&users).Error
+	err := repo.db.Model(model.User{}).Where("is_banned = ?", true).Find(&users).Error
 	if err != nil {
 		return nil, -1, errors.New("get user status failed")
 	}
@@ -944,9 +1029,10 @@ func (repo *mysqlUserRepo) GetBannedUsers() ([]model.User, int64, error) {
 
 			for _, user := range users {
 				cacheKey := fmt.Sprintf("banned_users")
-				err := repo.cache.SAdd(cacheKey, user)
+				jsonData, _ := json.Marshal(user)
+				err := repo.cache.SAdd(cacheKey, jsonData)
 				if err != nil {
-					return nil, -1, errors.New("add banned user cache failed")
+					return nil, -1, errors.New("add banned user cache failed: " + err.Error())
 				}
 			}
 		}
@@ -991,8 +1077,9 @@ func (repo *mysqlUserRepo) GetUsers() ([]model.User, int64, error) {
 	//缓存
 	if repo.cache != nil {
 		cacheKey := fmt.Sprintf("users")
+		exist := repo.cache.Exists(cacheKey)
 		jsonDatas, err := repo.cache.SMembers(cacheKey)
-		if err == nil {
+		if err == nil && exist {
 			var users []model.User
 			for _, jsonData := range jsonDatas {
 				var user model.User
@@ -1007,7 +1094,7 @@ func (repo *mysqlUserRepo) GetUsers() ([]model.User, int64, error) {
 
 	//数据库
 	var users []model.User
-	err := repo.db.Where("user_id > ?", 0).First(&users).Error
+	err := repo.db.Model(model.User{}).Where("user_id > ?", 0).Find(&users).Error
 	if err != nil {
 		return nil, -1, errors.New("get user status failed")
 	}
@@ -1020,8 +1107,9 @@ func (repo *mysqlUserRepo) GetUsers() ([]model.User, int64, error) {
 			defer repo.cache.Unlock(lockKey)
 
 			for _, user := range users {
+				jsonData, _ := json.Marshal(user)
 				cacheKey := fmt.Sprintf("users")
-				err := repo.cache.SAdd(cacheKey, user)
+				err := repo.cache.SAdd(cacheKey, jsonData)
 				if err != nil {
 					return nil, -1, errors.New("add users cache failed")
 				}
@@ -1036,8 +1124,9 @@ func (repo *mysqlUserRepo) GetAdmin() ([]model.User, int64, error) {
 	//缓存
 	if repo.cache != nil {
 		cacheKey := fmt.Sprintf("admin_users")
+		exist := repo.cache.Exists(cacheKey)
 		jsonDatas, err := repo.cache.SMembers(cacheKey)
-		if err == nil {
+		if err == nil && exist {
 			var users []model.User
 			for _, jsonData := range jsonDatas {
 				var user model.User
@@ -1052,7 +1141,7 @@ func (repo *mysqlUserRepo) GetAdmin() ([]model.User, int64, error) {
 
 	//数据库
 	var users []model.User
-	err := repo.db.Where("role = ?", "admin").First(&users).Error
+	err := repo.db.Model(model.User{}).Where("role = ?", "admin").Find(&users).Error
 	if err != nil {
 		return nil, -1, errors.New("get user status failed")
 	}
@@ -1065,8 +1154,9 @@ func (repo *mysqlUserRepo) GetAdmin() ([]model.User, int64, error) {
 			defer repo.cache.Unlock(lockKey)
 
 			for _, user := range users {
+				jsonData, _ := json.Marshal(user)
 				cacheKey := fmt.Sprintf("admin_users")
-				err := repo.cache.SAdd(cacheKey, user)
+				err := repo.cache.SAdd(cacheKey, jsonData)
 				if err != nil {
 					return nil, -1, errors.New("add admin users cache failed")
 				}

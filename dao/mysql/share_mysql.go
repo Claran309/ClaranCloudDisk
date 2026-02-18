@@ -217,7 +217,7 @@ func (repo *mysqlShareRepo) IsExp(share *model.Share) bool {
 }
 func (repo *mysqlShareRepo) LoadFiles(ctx context.Context, share *model.Share) error {
 	var shareFiles []model.ShareFile
-	err := repo.db.WithContext(ctx).Where("share_id = ?", share.ID).Preload("Files").Find(&shareFiles).Error
+	err := repo.db.WithContext(ctx).Where("share_id = ?", share.ID).Preload("File").Find(&shareFiles).Error
 	if err != nil {
 		return err
 	}

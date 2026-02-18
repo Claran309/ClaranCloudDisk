@@ -731,7 +731,7 @@ Cache-Control: public, max-age=31536000
 |--------|----|------|
 | Authorization | Bearer {token} | 访问令牌 |
 
-**查询参数**:
+**请求参数**:
 
 | 参数名 | 类型 | 必填 | 说明 | 示例 |
 |--------|------|------|------|------|
@@ -1235,68 +1235,12 @@ Content-Disposition: inline; filename="example.txt"
 - 404: 文件不存在或文件已丢失
 - 500: 获取文件类型失败或服务器内部错误
 
-### 13. 获取文件内容
-获取文件的原始字节流，支持HTTP范围请求。
 
-- **URL**: `/file/{id}/content`
-- **方法**: `GET`
-- **认证**: 需要 Bearer Token
-- **Content-Type**: 无
 
-**注意**: 此接口主要用于文件流式传输，如视频播放器、大文件下载等场景。
-
-**请求头**:
-
-| 请求头 | 值 | 说明 |
-|--------|----|------|
-| Authorization | Bearer {token} | 访问令牌 |
-
-**路径参数**:
-
-| 参数名 | 类型 | 必填 | 说明 | 示例 |
-|--------|------|------|------|------|
-| id | integer | 是 | 文件ID | 1 |
-
-**功能说明**:
-- 返回文件的原始字节流
-- 支持HTTP Range请求，用于大文件的分段下载
-- 自动设置正确的Content-Type响应头
-- 包含各种文件扩展名的MIME类型映射
-
-**HTTP Range请求示例**:
-```http
-GET /file/1/content HTTP/1.1
-Authorization: Bearer {token}
-Range: bytes=0-1023
-```
-
-**响应**:
-- 成功：返回文件字节流
-- 部分内容（206）：当使用Range请求时返回
-- 失败：返回JSON错误信息
-
-**响应头示例**:
-```
-Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
-Accept-Ranges: bytes
-Content-Length: 102400
-Content-Range: bytes 0-1023/102400  # 仅在使用Range请求时包含
-```
-
-**响应状态码**:
-- 200: 完整文件内容
-- 206: 部分内容（Range请求）
-- 400: 无效的文件ID或Range范围
-- 401: 令牌无效
-- 403: 无权限访问该文件
-- 404: 文件不存在
-- 416: 请求的范围不可满足
-- 500: 服务器内部错误
-
-### 14. 获取文件预览信息
+### 13. 获取文件预览信息
 获取文件的详细预览信息和相关URL。
 
-- **URL**: `/file/{id}/preview-info`
+- **URL**: `/file/{id}/preview_info`
 - **方法**: `GET`
 - **认证**: 需要 Bearer Token
 - **Content-Type**: 无
@@ -1359,7 +1303,7 @@ Content-Range: bytes 0-1023/102400  # 仅在使用Range请求时包含
 - 404: 文件不存在
 - 500: 获取文件类型失败或服务器内部错误
 
-### 15. 获取收藏列表
+### 14. 获取收藏列表
 获取当前用户收藏的所有文件列表。
 
 - **URL**: `/file/star_list`
@@ -1445,7 +1389,7 @@ Content-Range: bytes 0-1023/102400  # 仅在使用Range请求时包含
 - 401: 令牌无效
 - 500: 获取收藏列表失败
 
-### 16. 收藏文件
+### 15. 收藏文件
 收藏指定文件。
 
 - **URL**: `/file/{id}/star`
@@ -1500,7 +1444,7 @@ Content-Range: bytes 0-1023/102400  # 仅在使用Range请求时包含
 - 409: 文件已收藏
 - 500: 收藏文件失败
 
-### 17. 取消收藏文件
+### 16. 取消收藏文件
 取消收藏指定文件。
 
 - **URL**: `/file/{id}/Unstar`
@@ -1556,7 +1500,7 @@ Content-Range: bytes 0-1023/102400  # 仅在使用Range请求时包含
 - 404: 文件不存在或未收藏
 - 500: 取消收藏失败
 
-### 18. 搜索文件
+### 17. 搜索文件
 在当前用户旗下的文件中进行搜索。
 
 - **URL**: `/file/search`
@@ -1854,7 +1798,7 @@ Content-Range: bytes 0-1023/102400  # 仅在使用Range请求时包含
 |--------|------|------|------|------|
 | unique_id | string | 是 | 分享唯一标识符 | "abc123def456" |
 
-**查询参数**:
+**请求参数**:
 
 | 参数名 | 类型 | 必填 | 说明 | 示例 |
 |--------|------|------|------|------|

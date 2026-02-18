@@ -77,13 +77,13 @@ func main() {
 	// 业务逻辑层依赖
 	userService := services.NewUserService(userRepo, tokenRepo, jwtUtil, cfg.AvatarDIR, minIOClient)
 	fileService := services.NewUFileService(fileRepo, userRepo, minIOClient, cfg.CloudFileDir, cfg.MaxFileSize, cfg.NormalUserMaxStorage, cfg.LimitedSpeed)
-	shareService := services.NewShareService(shareRepo, fileRepo, userRepo, cfg.CloudFileDir)
+	shareService := services.NewShareService(shareRepo, fileRepo, userRepo, cfg.CloudFileDir, cfg.LimitedSpeed)
 	verificationService := services.NewVerificationService(verificationRepo, cfg.Email)
 	adminService := services.NewAdminService(userRepo)
 	// 处理器层依赖
 	userHandler := handlers.NewUserHandler(userService, cfg.DefaultAvatarPath, minIOClient)
 	fileHandler := handlers.NewFileHandler(fileService, minIOClient)
-	shareHandler := handlers.NewShareHandler(shareService)
+	shareHandler := handlers.NewShareHandler(shareService, minIOClient)
 	verificationHandler := handlers.NewVerificationHandler(verificationService)
 	adminHandler := handlers.NewAdminHandler(adminService)
 	//创建中间件
@@ -135,12 +135,12 @@ func main() {
 	file.GET("/bin", fileHandler.GetBinList)                     // 获取回收站文件列表
 	file.PUT("/:id/rename", fileHandler.Rename)                  // 重命名文件
 	file.GET("/:id/preview", fileHandler.Preview)                // 预览文件
-	file.GET("/:id/content", fileHandler.GetContent)             // 获取文件内容
-	file.GET("/:id/preview-info", fileHandler.GetPreInfo)        // 获取预览信息
+	file.GET("/:id/preview_info", fileHandler.GetPreInfo)        // 获取预览信息
 	file.GET("/star_list", fileHandler.GetStarList)              // 获取收藏列表
 	file.POST("/:id/star", fileHandler.Star)                     // 收藏
 	file.POST("/:id/Unstar", fileHandler.Unstar)                 // 取消收藏
 	file.POST("/search", fileHandler.SearchFile)                 // 用户旗下的文件搜索
+	//file.GET("/:id/content", fileHandler.GetContent)             // 获取文件内容
 	//=======================================分享管理路由===============================================
 	zap.L().Info("启动路由服务",
 		zap.String("service", "share-service"),

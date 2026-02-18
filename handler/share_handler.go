@@ -4,8 +4,11 @@ import (
 	"ClaranCloudDisk/model"
 	services "ClaranCloudDisk/service"
 	"ClaranCloudDisk/util"
+	"ClaranCloudDisk/util/minIO"
 	"fmt"
+	"io"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -13,10 +16,14 @@ import (
 
 type ShareHandler struct {
 	shareService *services.ShareService
+	minioClient  *minIO.MinIOClient
 }
 
-func NewShareHandler(shareService *services.ShareService) *ShareHandler {
-	return &ShareHandler{shareService}
+func NewShareHandler(shareService *services.ShareService, minIOClient *minIO.MinIOClient) *ShareHandler {
+	return &ShareHandler{
+		shareService: shareService,
+		minioClient:  minIOClient,
+	}
 }
 
 func (h *ShareHandler) CreateShare(c *gin.Context) {
@@ -122,7 +129,8 @@ func (h *ShareHandler) GetShareInfo(c *gin.Context) {
 		zap.String("method", c.Request.Method),
 		zap.String("client_ip", c.ClientIP()))
 	uniqueID := c.Param("unique_id")
-	password := c.DefaultQuery("password", "")
+	password := c.PostForm("password")
+	//zap.S().Info(password)
 
 	ctx := c.Request.Context()
 	shareInfo, err := h.shareService.GetShareInfo(ctx, uniqueID, password)
@@ -157,6 +165,7 @@ func (h *ShareHandler) DownloadSpecFile(c *gin.Context) {
 		zap.String("url", c.Request.RequestURI),
 		zap.String("method", c.Request.Method),
 		zap.String("client_ip", c.ClientIP()))
+	userID := c.GetInt("user_id")
 	uniqueID := c.Param("unique_id")
 	fileIDStr := c.Param("file_id")
 	password := c.DefaultQuery("password", "")
@@ -169,25 +178,169 @@ func (h *ShareHandler) DownloadSpecFile(c *gin.Context) {
 	}
 
 	ctx := c.Request.Context()
-	file, err := h.shareService.DownloadSpecFile(ctx, uniqueID, password, uint(fileID))
+	file, limitedSpeed, err := h.shareService.DownloadSpecFile(ctx, uniqueID, password, uint(fileID), userID)
 	if err != nil {
 		zap.S().Errorf("下载指定文件失败: %v", err)
 		util.Error(c, 403, err.Error())
 		return
 	}
 
-	// 设置下载响应头
+	//// 设置下载响应头
+	//c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", file.Name))
+	//c.Header("Content-Type", "application/octet-stream")
+	//c.Header("Content-Length", fmt.Sprintf("%d", file.Size))
+	//
+	//zap.L().Info("下载特定文件请求结束",
+	//	zap.String("url", c.Request.RequestURI),
+	//	zap.String("method", c.Request.Method),
+	//	zap.String("client_ip", c.ClientIP()))
+	//
+	//// 发送文件
+	//c.File(file.Path)
+	//设置响应头，返回的信息为下载文件流本身，而非JSON响应
+	//指定传输编码为二进制，确保文件不会因为编码问题而损坏
+	c.Header("Content-Transfer-Encoding", "binary")
+	//强制下载并指定文件名
 	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", file.Name))
+	//设置文件类型为二进制文件
 	c.Header("Content-Type", "application/octet-stream")
+	//提供Size用于为客户端提供下载进度和剩余时间
 	c.Header("Content-Length", fmt.Sprintf("%d", file.Size))
 
-	zap.L().Info("下载特定文件请求结束",
-		zap.String("url", c.Request.RequestURI),
-		zap.String("method", c.Request.Method),
-		zap.String("client_ip", c.ClientIP()))
+	//从minIO获取文件流
+	stream, err := h.minioClient.GetStream(c, file.Path)
+	if err != nil {
+		zap.S().Errorf("从minIO获取文件失败: %v", err)
+		util.Error(c, 500, "从minIO获取文件失败"+err.Error())
+		return
+	}
+	defer stream.Close()
 
-	// 发送文件
-	c.File(file.Path)
+	//不限速
+	if limitedSpeed == 0 {
+		io.Copy(c.Writer, stream)
+		zap.L().Info("下载请求结束",
+			zap.String("url", c.Request.RequestURI),
+			zap.String("method", c.Request.Method),
+			zap.String("client_ip", c.ClientIP()))
+		return
+	}
+
+	//限速
+	bufferSize := int64(64 * 1024) // 64KB缓冲区
+	if limitedSpeed < bufferSize {
+		bufferSize = limitedSpeed
+	}
+
+	buf := make([]byte, bufferSize)
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			// 每秒最多读取limitedSpeed字节
+			bytesRead := int64(0)
+			for bytesRead < limitedSpeed {
+				remaining := limitedSpeed - bytesRead
+				readSize := remaining
+				if readSize > bufferSize {
+					readSize = bufferSize
+				}
+
+				// 读取文件
+				n, err := stream.Read(buf[:readSize])
+				if n > 0 {
+					// 写入HTTP响应
+					_, writeErr := c.Writer.Write(buf[:n])
+					if writeErr != nil {
+						return
+					}
+					c.Writer.Flush()      // 立即发送给客户端
+					bytesRead += int64(n) // 累计已读取字节
+				}
+
+				if err != nil {
+					if err == io.EOF {
+						zap.L().Info("下载请求结束",
+							zap.String("url", c.Request.RequestURI),
+							zap.String("method", c.Request.Method),
+							zap.String("client_ip", c.ClientIP()))
+						return // 文件读取完成
+					}
+					return
+				}
+			}
+		case <-ctx.Done():
+			zap.L().Info("下载请求超时",
+				zap.String("url", c.Request.RequestURI),
+				zap.String("method", c.Request.Method),
+				zap.String("client_ip", c.ClientIP()))
+			return // 上下文取消
+		}
+	}
+
+	//=============================================================================================================
+	//发送文件
+	//fileContent, err := os.Open(file.Path)
+	//if err != nil {
+	//	util.Error(c, 500, "打开文件失败: "+err.Error())
+	//	return
+	//}
+	//defer fileContent.Close()
+	//
+	//// 不限速
+	//if limitedSpeed == 0 {
+	//	io.Copy(c.Writer, fileContent)
+	//	return
+	//}
+	//
+	//// 限速处理
+	//bufferSize := int64(64 * 1024) // 64KB缓冲区
+	//if limitedSpeed < bufferSize {
+	//	bufferSize = limitedSpeed
+	//}
+	//
+	//buf := make([]byte, bufferSize)
+	//ticker := time.NewTicker(time.Second)
+	//defer ticker.Stop()
+	//
+	//for {
+	//	select {
+	//	case <-ticker.C:
+	//		// 每秒最多读取limitedSpeed字节
+	//		bytesRead := int64(0)
+	//		for bytesRead < limitedSpeed {
+	//			remaining := limitedSpeed - bytesRead
+	//			readSize := remaining
+	//			if readSize > bufferSize {
+	//				readSize = bufferSize
+	//			}
+	//
+	//			// 读取文件
+	//			n, err := fileContent.Read(buf[:readSize])
+	//			if n > 0 {
+	//				// 写入HTTP响应
+	//				_, writeErr := c.Writer.Write(buf[:n])
+	//				if writeErr != nil {
+	//					return
+	//				}
+	//				c.Writer.Flush()      // 立即发送给客户端
+	//				bytesRead += int64(n) // 累计已读取字节
+	//			}
+	//
+	//			if err != nil {
+	//				if err == io.EOF {
+	//					return // 文件读取完成
+	//				}
+	//				return
+	//			}
+	//		}
+	//	case <-ctx.Done():
+	//		return // 上下文取消
+	//	}
+	//}
+	//=============================================================================================================
 }
 
 func (h *ShareHandler) SaveSpecFile(c *gin.Context) {

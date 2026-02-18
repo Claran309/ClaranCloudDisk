@@ -59,6 +59,10 @@ func (rc *RedisClient) Delete(key string) error {
 }
 
 func (rc *RedisClient) SAdd(key string, members ...interface{}) error {
+	//zap.S().Infof(key, members...)
+	//if members == nil {
+	//	return fmt.Errorf("缓存值为空")
+	//}
 	return rc.client.SAdd(rc.ctx, key, members...).Err()
 }
 

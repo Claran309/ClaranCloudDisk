@@ -15,6 +15,8 @@ import (
 	"path/filepath"
 	"sort"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 type FileService struct {
@@ -151,7 +153,8 @@ func (s *FileService) Download(ctx context.Context, userID int, fileID int64) (*
 		return nil, -1, fmt.Errorf("获取用户信息失败")
 	}
 	LimitedSpeed := s.LimitedSpeed
-	if isVIP {
+	user, _ := s.UserRepo.SelectByUserID(int(userID))
+	if isVIP || user.Role == "admin" {
 		LimitedSpeed = 0
 	}
 
@@ -182,14 +185,16 @@ func (s *FileService) GetFileList(ctx context.Context, userID int) ([]*model.Fil
 }
 
 func (s *FileService) GetStarList(ctx context.Context, userID int) ([]*model.File, int, error) {
-	allFiles, total, err := s.FileRepo.FindByUserID(ctx, uint(userID))
+	allFiles, _, err := s.FileRepo.FindByUserID(ctx, uint(userID))
 	var files []*model.File
+	var starTotal int
 	for i, file := range allFiles {
 		if allFiles[i].IsStarred == true {
 			files = append(files, file)
+			starTotal++
 		}
 	}
-	return files, int(total), err
+	return files, starTotal, err
 }
 
 func (s *FileService) Star(ctx context.Context, userID int, fileID int64) (*model.File, error) {
@@ -236,7 +241,7 @@ func (s *FileService) Unstar(ctx context.Context, userID int, fileID int64) (*mo
 	//数据层
 	err = s.FileRepo.Unstar(ctx, fileID)
 	if err != nil {
-		return nil, fmt.Errorf("收藏文件失败: %v", err)
+		return nil, fmt.Errorf("取消收藏文件失败: %v", err)
 	}
 
 	return file, nil
@@ -449,7 +454,7 @@ func (s *FileService) InitChunkUpload(userID int, fileName string, fileHash stri
 	}
 
 	//创建临时分片文件夹
-	tmpPath := filepath.Join(s.uploadDir, fmt.Sprintf("user_%d", uint(userID)), "tmp_uploads/", fileHash) // ./user_:id/tmp_uploads/fileHash/
+	tmpPath := filepath.Join(".", s.uploadDir, fmt.Sprintf("user_%d", uint(userID)), "tmp_uploads/", fileHash) // ./user_:id/tmp_uploads/fileHash/
 	err = os.MkdirAll(tmpPath, 0755)
 	if err != nil {
 		//回滚
@@ -472,8 +477,9 @@ func (s *FileService) SaveChunk(fileHash string, userID int, chunkIndex int, chu
 
 	//将分片保存在临时文件夹内
 	tmpPath := filepath.Join(s.uploadDir, fmt.Sprintf("user_%d", uint(userID)), "tmp_uploads/", fileHash) // ./user_:id/tmp_uploads/fileHash/
-	chunkPath := filepath.Join(tmpPath, fmt.Sprintf("chunk_%d", chunkIndex))
+	chunkPath := filepath.Join("."+tmpPath, fmt.Sprintf("chunk_%d", chunkIndex))
 
+	zap.S().Info(chunkPath)
 	err = os.WriteFile(chunkPath, chunkData, 0644)
 	if err != nil {
 		return fmt.Errorf("保存分片失败: %v", err)
@@ -510,7 +516,7 @@ func (s *FileService) MergeAllChunks(userID int, fileHash string, fileName strin
 	sort.Ints(chunks)
 
 	//合并分片
-	filePath, fileSize, err := s.MergeChunks(userID, fileHash, fileName, chunks)
+	filePath, fileSize, _, err := s.MergeChunks(userID, fileHash, fileName, chunks)
 	if err != nil {
 		return &model.File{}, fmt.Errorf("合并分片失败: %v", err)
 	}
@@ -519,7 +525,8 @@ func (s *FileService) MergeAllChunks(userID int, fileHash string, fileName strin
 	s.FileRepo.CleanChunkUploadSession(fileHash)
 
 	//将分片整合为file
-	ext := filepath.Ext(filePath)
+	ext := filepath.Ext(fileName)
+	//zap.S().Info(filePath, ext, mimetype, fileName)
 	ext = ext[1:]
 	file := model.File{
 		UserID:   uint(userID),
@@ -539,12 +546,12 @@ func (s *FileService) MergeAllChunks(userID int, fileHash string, fileName strin
 	}
 
 	//更新file
-	finalFile, _ := s.FileRepo.FindByHash(context.Background(), fileHash)
+	//finalFile, _ := s.FileRepo.FindByHash(context.Background(), fileHash)
 
-	return finalFile, nil
+	return &file, nil
 }
 
-func (s *FileService) MergeChunks(userID int, fileHash string, filename string, chunks []int) (string, int64, error) {
+func (s *FileService) MergeChunks(userID int, fileHash string, filename string, chunks []int) (string, int64, string, error) {
 	fileName := s.CreateName(filename, uint(userID))
 	filePath := filepath.Join(s.uploadDir, fmt.Sprintf("user_%d", uint(userID)), fileName)
 	ext := filepath.Ext(filePath)
@@ -552,17 +559,17 @@ func (s *FileService) MergeChunks(userID int, fileHash string, filename string, 
 	dir := filepath.Dir(filePath)
 	//0755 : 0-无特殊权限  7-rwx  5-rx  5-rx
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		return "", -1, err
+		return "", -1, "", err
 	}
 	finalFile, err := os.Create(filePath)
 	if err != nil {
-		return "", -1, fmt.Errorf("创建最终文件失败: %v", err)
+		return "", -1, "", errors.New("创建最终文件失败: %v" + err.Error())
 	}
 	defer finalFile.Close()
 
 	//合并分片
 	var totalSize int64
-	tmpPath := filepath.Join(s.uploadDir, fmt.Sprintf("user_%d", uint(userID)), "tmp_uploads/", fileHash) // ./user_:id/tmp_uploads/fileHash/
+	tmpPath := filepath.Join(".", s.uploadDir, fmt.Sprintf("user_%d", uint(userID)), "tmp_uploads/", fileHash) // ./user_:id/tmp_uploads/fileHash/
 	for _, chunkIndex := range chunks {
 		//寻找当前chunk路径
 		chunkPath := filepath.Join(tmpPath, fmt.Sprintf("chunk_%d", chunkIndex))
@@ -570,14 +577,14 @@ func (s *FileService) MergeChunks(userID int, fileHash string, filename string, 
 		//打开当前chunk
 		chunkFile, err := os.Open(chunkPath)
 		if err != nil {
-			return "", -1, fmt.Errorf("打开分片失败: %v", err)
+			return "", -1, "", errors.New("打开分片失败: %v" + err.Error())
 		}
 
 		//将chunk内容合并到file
 		writer, err := io.Copy(finalFile, chunkFile)
 		chunkFile.Close()
 		if err != nil {
-			return "", -1, fmt.Errorf("合并分片失败: %v", err)
+			return "", -1, "", errors.New("合并分片失败: %v" + err.Error())
 		}
 
 		totalSize += writer
@@ -591,19 +598,19 @@ func (s *FileService) MergeChunks(userID int, fileHash string, filename string, 
 	//获取字节数据
 	finalFileData, err := io.ReadAll(finalFile)
 	if err != nil {
-		return "", -1, errors.New("读取合并文件失败")
+		return "", -1, "", errors.New("读取合并文件失败")
 	}
 
 	//保存到minIO
 	if err := s.minioClient.Save(context.Background(), filePath, finalFileData, ext); err != nil {
-		return "", -1, err
+		return "", -1, "", err
 	}
 
 	//删除本地文件
-	os.Remove(filePath)
+	//os.Remove(filePath)
 	os.Remove(tmpPath)
 
-	return filePath, totalSize, nil
+	return filePath, totalSize, ext, nil
 }
 
 func (s *FileService) GetUploadedChunks(fileHash string) ([]int, error) {

@@ -8,7 +8,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"io"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -17,14 +16,15 @@ import (
 )
 
 type ShareService struct {
-	shareRepo mysql.ShareRepository
-	fileRepo  mysql.FileRepository
-	userRepo  mysql.UserRepository
-	uploadDir string
+	shareRepo    mysql.ShareRepository
+	fileRepo     mysql.FileRepository
+	userRepo     mysql.UserRepository
+	uploadDir    string
+	LimitedSpeed int64
 }
 
-func NewShareService(shareRepo mysql.ShareRepository, fileRepo mysql.FileRepository, userRepo mysql.UserRepository, uploadDir string) *ShareService {
-	return &ShareService{shareRepo, fileRepo, userRepo, uploadDir}
+func NewShareService(shareRepo mysql.ShareRepository, fileRepo mysql.FileRepository, userRepo mysql.UserRepository, uploadDir string, LimitedSpeed int64) *ShareService {
+	return &ShareService{shareRepo, fileRepo, userRepo, uploadDir, LimitedSpeed}
 }
 
 func (s *ShareService) CreateShare(ctx context.Context, userID uint, req *model.CreateShareRequest) (*model.Share, error) {
@@ -47,6 +47,9 @@ func (s *ShareService) CreateShare(ctx context.Context, userID uint, req *model.
 	if err != nil {
 		return nil, err
 	}
+
+	user, err := s.userRepo.SelectByUserID(int(userID))
+
 	// 创建分享记录
 	share := &model.Share{
 		UniqueID:  uniqueID,
@@ -54,6 +57,7 @@ func (s *ShareService) CreateShare(ctx context.Context, userID uint, req *model.
 		Password:  hashedPassword,
 		Exp:       time.Duration(req.ExpireDays) * 24 * time.Hour,
 		CreatedAt: time.Now(),
+		User:      user,
 	}
 
 	// 数据库
@@ -88,7 +92,7 @@ func (s *ShareService) GetShareInfo(ctx context.Context, uniqueID, password stri
 	// 获取分享信息
 	share, err := s.shareRepo.GetShareByUniqueID(ctx, uniqueID)
 	if err != nil {
-		return nil, errors.New("分享不存在")
+		return nil, errors.New("分享不存在 err：" + err.Error() + "uniqueID: " + uniqueID)
 	}
 
 	// 检查是否过期
@@ -97,7 +101,7 @@ func (s *ShareService) GetShareInfo(ctx context.Context, uniqueID, password stri
 	}
 
 	// 验证密码
-	if share.Password != "" && util.CheckPassword(password, share.Password) {
+	if share.Password == "" || util.CheckPassword(password, share.Password) {
 		return &model.ShareInfoResponse{}, errors.New("password is incorrect")
 	}
 
@@ -136,19 +140,19 @@ func (s *ShareService) GetShareInfo(ctx context.Context, uniqueID, password stri
 	return response, nil
 }
 
-func (s *ShareService) DownloadSpecFile(ctx context.Context, uniqueID, password string, fileID uint) (*model.File, error) {
+func (s *ShareService) DownloadSpecFile(ctx context.Context, uniqueID, password string, fileID uint, userID int) (*model.File, int64, error) {
 	// 验证分享访问权限
 	share, err := s.shareRepo.GetShareByUniqueID(ctx, uniqueID)
 	if err != nil {
-		return nil, errors.New("分享不存在")
+		return nil, -1, errors.New("分享不存在")
 	}
 
 	if s.shareRepo.IsExp(share) {
-		return nil, errors.New("分享已过期")
+		return nil, -1, errors.New("分享已过期")
 	}
 
 	if share.Password != "" && util.CheckPassword(password, share.Password) {
-		return nil, errors.New("密码错误")
+		return nil, -1, errors.New("密码错误")
 	}
 
 	// 检查文件是否属于此分享
@@ -157,7 +161,7 @@ func (s *ShareService) DownloadSpecFile(ctx context.Context, uniqueID, password 
 		if shareFile.FileID == fileID {
 			file, err := s.fileRepo.FindByID(ctx, fileID)
 			if err != nil {
-				return nil, errors.New("文件不存在")
+				return nil, -1, errors.New("文件不存在")
 			}
 			targetFile = file
 			break
@@ -165,15 +169,26 @@ func (s *ShareService) DownloadSpecFile(ctx context.Context, uniqueID, password 
 	}
 
 	if targetFile == nil {
-		return nil, errors.New("文件不存在于分享中")
+		return nil, -1, errors.New("文件不存在于分享中")
 	}
 
-	return targetFile, nil
+	//获取信息
+	isVIP, err := s.userRepo.GetVIP(userID)
+	if err != nil {
+		return nil, -1, fmt.Errorf("获取用户信息失败")
+	}
+	LimitedSpeed := s.LimitedSpeed
+	user, _ := s.userRepo.SelectByUserID(int(userID))
+	if isVIP || user.Role == "admin" {
+		LimitedSpeed = 0
+	}
+
+	return targetFile, LimitedSpeed, nil
 }
 
 func (s *ShareService) SaveSpecFile(ctx context.Context, userID uint, uniqueID, password string, fileID uint) (*model.File, error) {
 	// 获取分享文件
-	shareFile, err := s.DownloadSpecFile(ctx, uniqueID, password, fileID)
+	shareFile, _, err := s.DownloadSpecFile(ctx, uniqueID, password, fileID, int(userID))
 	if err != nil {
 		return nil, err
 	}
@@ -188,10 +203,11 @@ func (s *ShareService) SaveSpecFile(ctx context.Context, userID uint, uniqueID, 
 	newFileName := s.GenerateUniqueFileName(shareFile.Name, userID)
 	newFilePath := filepath.Join(s.uploadDir, fmt.Sprintf("user_%d", userID), newFileName)
 
-	// 复制文件
-	if err := s.CopyFile(shareFile.Path, newFilePath); err != nil {
-		return nil, fmt.Errorf("复制文件失败: %v", err)
-	}
+	//// 复制文件
+	//err = s.fileRepo.Create(context.Background(), shareFile)
+	//if err != nil {
+	//	return nil, err
+	//}
 
 	// 创建新文件记录
 	newFile := &model.File{
@@ -206,7 +222,7 @@ func (s *ShareService) SaveSpecFile(ctx context.Context, userID uint, uniqueID, 
 
 	if err := s.fileRepo.Create(ctx, newFile); err != nil {
 		// 清理已复制的文件
-		os.Remove(newFilePath)
+		//os.Remove(newFilePath)
 		return nil, fmt.Errorf("创建文件记录失败: %v", err)
 	}
 
@@ -235,26 +251,4 @@ func (s *ShareService) GenerateUniqueFileName(name string, userID uint) string {
 	randomStr := fmt.Sprintf("%d", timestamp)
 
 	return fmt.Sprintf("%d_%s%s", userID, randomStr, ext)
-}
-
-func (s *ShareService) CopyFile(src, dst string) error {
-	// 创建目标目录
-	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
-		return err
-	}
-
-	source, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer source.Close()
-
-	destination, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer destination.Close()
-
-	_, err = io.Copy(destination, source)
-	return err
 }

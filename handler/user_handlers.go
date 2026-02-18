@@ -84,6 +84,7 @@ func (h *UserHandler) Login(c *gin.Context) {
 	if err != nil {
 		zap.S().Errorf("登录失败: %v", err)
 		util.Error(c, 500, err.Error())
+		return
 	}
 
 	zap.L().Info("登录请求结束",

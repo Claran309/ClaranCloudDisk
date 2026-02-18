@@ -57,14 +57,14 @@ func (repo *mysqlFileRepo) Create(ctx context.Context, file *model.File) error {
 
 			// userID - files
 			userIDCacheKey := fmt.Sprintf("userID:%d", file.UserID)
-			err = repo.cache.Delete(userIDCacheKey)
+			err = repo.cache.Clean(userIDCacheKey)
 			if err != nil {
 				return errors.New("set cache failed")
 			}
 
 			// ParentID - files
 			parentIDCacheKey := fmt.Sprintf("parentID:%d", file.ParentID)
-			err = repo.cache.Delete(parentIDCacheKey)
+			err = repo.cache.Clean(parentIDCacheKey)
 			if err != nil {
 				return errors.New("set cache failed")
 			}
@@ -99,14 +99,14 @@ func (repo *mysqlFileRepo) Update(ctx context.Context, file *model.File) error {
 
 			// userID - files
 			userIDCacheKey := fmt.Sprintf("userID:%d", file.UserID)
-			err = repo.cache.Delete(userIDCacheKey)
+			err = repo.cache.Clean(userIDCacheKey)
 			if err != nil {
 				return errors.New("set cache failed")
 			}
 
 			// ParentID - files
 			parentIDCacheKey := fmt.Sprintf("parentID:%d", file.ParentID)
-			err = repo.cache.Delete(parentIDCacheKey)
+			err = repo.cache.Clean(parentIDCacheKey)
 			if err != nil {
 				return errors.New("set cache failed")
 			}
@@ -145,14 +145,14 @@ func (repo *mysqlFileRepo) Delete(ctx context.Context, id uint) error {
 
 			// userID - files
 			userIDCacheKey := fmt.Sprintf("userID:%d", file.UserID)
-			err = repo.cache.Delete(userIDCacheKey)
+			err = repo.cache.Clean(userIDCacheKey)
 			if err != nil {
 				return errors.New("set cache failed")
 			}
 
 			// ParentID - files
 			parentIDCacheKey := fmt.Sprintf("parentID:%d", file.ParentID)
-			err = repo.cache.Delete(parentIDCacheKey)
+			err = repo.cache.Clean(parentIDCacheKey)
 			if err != nil {
 				return errors.New("set cache failed")
 			}
@@ -164,9 +164,9 @@ func (repo *mysqlFileRepo) Delete(ctx context.Context, id uint) error {
 func (repo *mysqlFileRepo) Star(ctx context.Context, fileID int64) error {
 	return repo.db.Transaction(func(tx *gorm.DB) error {
 		//更新数据库
-		err := repo.db.WithContext(ctx).Where("id = ?", fileID).Update("is_starred", true).Error
+		err := repo.db.WithContext(ctx).Model(model.File{}).Where("id = ?", fileID).Update("is_starred", true).Error
 		if err != nil {
-			return errors.New("failed to star file")
+			return errors.New("failed to star file: " + err.Error())
 		}
 		var file model.File
 		repo.db.WithContext(ctx).First(&file, fileID)
@@ -190,14 +190,14 @@ func (repo *mysqlFileRepo) Star(ctx context.Context, fileID int64) error {
 
 			// userID - files
 			userIDCacheKey := fmt.Sprintf("userID:%d", file.UserID)
-			err = repo.cache.Delete(userIDCacheKey)
+			err = repo.cache.Clean(userIDCacheKey)
 			if err != nil {
 				return errors.New("set cache failed")
 			}
 
 			// ParentID - files
 			parentIDCacheKey := fmt.Sprintf("parentID:%d", file.ParentID)
-			err = repo.cache.Delete(parentIDCacheKey)
+			err = repo.cache.Clean(parentIDCacheKey)
 			if err != nil {
 				return errors.New("set cache failed")
 			}
@@ -209,7 +209,7 @@ func (repo *mysqlFileRepo) Star(ctx context.Context, fileID int64) error {
 func (repo *mysqlFileRepo) Unstar(ctx context.Context, fileID int64) error {
 	return repo.db.Transaction(func(tx *gorm.DB) error {
 		//更新数据库
-		err := repo.db.WithContext(ctx).Where("id = ?", fileID).Update("is_starred", false).Error
+		err := repo.db.WithContext(ctx).Model(model.File{}).Where("id = ?", fileID).Update("is_starred", false).Error
 		if err != nil {
 			return errors.New("failed to star file")
 		}
@@ -235,14 +235,14 @@ func (repo *mysqlFileRepo) Unstar(ctx context.Context, fileID int64) error {
 
 			// userID - files
 			userIDCacheKey := fmt.Sprintf("userID:%d", file.UserID)
-			err = repo.cache.Delete(userIDCacheKey)
+			err = repo.cache.Clean(userIDCacheKey)
 			if err != nil {
 				return errors.New("set cache failed")
 			}
 
 			// ParentID - files
 			parentIDCacheKey := fmt.Sprintf("parentID:%d", file.ParentID)
-			err = repo.cache.Delete(parentIDCacheKey)
+			err = repo.cache.Clean(parentIDCacheKey)
 			if err != nil {
 				return errors.New("set cache failed")
 			}
@@ -287,9 +287,11 @@ func (repo *mysqlFileRepo) FindByID(ctx context.Context, id uint) (*model.File, 
 		if suc, _ := repo.cache.Lock(lockKey, 10*time.Second); suc {
 			defer repo.cache.Unlock(lockKey)
 
+			jsonData, err := json.Marshal(file)
+
 			// fileId - file
 			fileCacheKey := fmt.Sprintf("fileID:%d", file.ID)
-			err := repo.cache.Set(fileCacheKey, file, repo.cache.RandExp(5*time.Minute))
+			err = repo.cache.Set(fileCacheKey, file, repo.cache.RandExp(5*time.Minute))
 			if err != nil {
 				return &model.File{}, errors.New("set cache failed")
 			}
@@ -303,7 +305,7 @@ func (repo *mysqlFileRepo) FindByID(ctx context.Context, id uint) (*model.File, 
 
 			// userID - files
 			userIDCacheKey := fmt.Sprintf("userID:%d", file.UserID)
-			err = repo.cache.SAdd(userIDCacheKey, file)
+			err = repo.cache.SAdd(userIDCacheKey, jsonData)
 			if err != nil {
 				return &model.File{}, errors.New("set cache failed")
 			}
@@ -314,7 +316,7 @@ func (repo *mysqlFileRepo) FindByID(ctx context.Context, id uint) (*model.File, 
 
 			// parentID - files
 			parentIDCacheKey := fmt.Sprintf("parentID:%d", file.ParentID)
-			err = repo.cache.SAdd(parentIDCacheKey, file)
+			err = repo.cache.SAdd(parentIDCacheKey, jsonData)
 			if err != nil {
 				return &model.File{}, errors.New("set cache failed")
 			}
@@ -365,9 +367,11 @@ func (repo *mysqlFileRepo) FindByHash(ctx context.Context, hash string) (*model.
 		if suc, _ := repo.cache.Lock(lockKey, 10*time.Second); suc {
 			defer repo.cache.Unlock(lockKey)
 
+			jsonData, err := json.Marshal(file)
+
 			// fileId - file
 			fileCacheKey := fmt.Sprintf("fileID:%d", file.ID)
-			err := repo.cache.Set(fileCacheKey, file, repo.cache.RandExp(5*time.Minute))
+			err = repo.cache.Set(fileCacheKey, file, repo.cache.RandExp(5*time.Minute))
 			if err != nil {
 				return &model.File{}, errors.New("set cache failed")
 			}
@@ -381,7 +385,7 @@ func (repo *mysqlFileRepo) FindByHash(ctx context.Context, hash string) (*model.
 
 			// userID - files
 			userIDCacheKey := fmt.Sprintf("userID:%d", file.UserID)
-			err = repo.cache.SAdd(userIDCacheKey, file)
+			err = repo.cache.SAdd(userIDCacheKey, jsonData)
 			if err != nil {
 				return &model.File{}, errors.New("set cache failed")
 			}
@@ -392,7 +396,7 @@ func (repo *mysqlFileRepo) FindByHash(ctx context.Context, hash string) (*model.
 
 			// parentID - files
 			parentIDCacheKey := fmt.Sprintf("parentID:%d", file.ParentID)
-			err = repo.cache.SAdd(parentIDCacheKey, file)
+			err = repo.cache.SAdd(parentIDCacheKey, jsonData)
 			if err != nil {
 				return &model.File{}, errors.New("set cache failed")
 			}
@@ -411,8 +415,9 @@ func (repo *mysqlFileRepo) FindByUserID(ctx context.Context, userID uint) ([]*mo
 	//从缓存中查找
 	if repo.cache != nil {
 		userIDCacheKey := fmt.Sprintf("userID:%d", userID)
+		exist := repo.cache.Exists(userIDCacheKey)
 		jsonDatas, err := repo.cache.SMembers(userIDCacheKey)
-		if err == nil {
+		if err == nil && exist {
 			var files []*model.File
 			for _, jsonData := range jsonDatas {
 				var file model.File
@@ -450,40 +455,42 @@ func (repo *mysqlFileRepo) FindByUserID(ctx context.Context, userID uint) ([]*mo
 			defer repo.cache.Unlock(lockKey)
 
 			for _, file := range files {
+				jsonData, err := json.Marshal(file)
 				// fileId - file
 				fileCacheKey := fmt.Sprintf("fileID:%d", file.ID)
-				err := repo.cache.Set(fileCacheKey, file, repo.cache.RandExp(5*time.Minute))
+				err = repo.cache.Set(fileCacheKey, file, repo.cache.RandExp(5*time.Minute))
 				if err != nil {
-					return nil, -1, errors.New("set cache failed")
+					return nil, -1, errors.New("set cache failed:1: " + err.Error())
 				}
 
 				// fileHash - file
 				fileHashCacheKey := fmt.Sprintf("fileHash:%s", file.Hash)
 				err = repo.cache.Set(fileHashCacheKey, file, repo.cache.RandExp(5*time.Minute))
 				if err != nil {
-					return nil, -1, errors.New("set cache failed")
+					return nil, -1, errors.New("set cache failed:2: " + err.Error())
 				}
 
 				// userID - files
 				userIDCacheKey := fmt.Sprintf("userID:%d", file.UserID)
-				err = repo.cache.SAdd(userIDCacheKey, file)
+				//zap.S().Info(userIDCacheKey, file)
+				err = repo.cache.SAdd(userIDCacheKey, jsonData)
 				if err != nil {
-					return nil, -1, errors.New("set cache failed")
+					return nil, -1, errors.New("set cache failed:3: " + err.Error())
 				}
 				err = repo.cache.Expire(userIDCacheKey, repo.cache.RandExp(5*time.Minute))
 				if err != nil {
-					return nil, -1, errors.New("set cache failed")
+					return nil, -1, errors.New("set cache failed:4: " + err.Error())
 				}
 
 				// parentID - files
 				parentIDCacheKey := fmt.Sprintf("parentID:%d", file.ParentID)
-				err = repo.cache.SAdd(parentIDCacheKey, file)
+				err = repo.cache.SAdd(parentIDCacheKey, jsonData)
 				if err != nil {
-					return nil, -1, errors.New("set cache failed")
+					return nil, -1, errors.New("set cache failed:5: " + err.Error())
 				}
 				err = repo.cache.Expire(parentIDCacheKey, repo.cache.RandExp(5*time.Minute))
 				if err != nil {
-					return nil, -1, errors.New("set cache failed")
+					return nil, -1, errors.New("set cache failed:6 : " + err.Error())
 				}
 			}
 		}
@@ -537,9 +544,11 @@ func (repo *mysqlFileRepo) FindByParentID(ctx context.Context, parentID *uint, u
 			defer repo.cache.Unlock(lockKey)
 
 			for _, file := range files {
+
+				jsonData, err := json.Marshal(file)
 				// fileId - file
 				fileCacheKey := fmt.Sprintf("fileID:%d", file.ID)
-				err := repo.cache.Set(fileCacheKey, file, repo.cache.RandExp(5*time.Minute))
+				err = repo.cache.Set(fileCacheKey, file, repo.cache.RandExp(5*time.Minute))
 				if err != nil {
 					return nil, -1, errors.New("set cache failed")
 				}
@@ -553,7 +562,7 @@ func (repo *mysqlFileRepo) FindByParentID(ctx context.Context, parentID *uint, u
 
 				// userID - files
 				userIDCacheKey := fmt.Sprintf("userID:%d", file.UserID)
-				err = repo.cache.SAdd(userIDCacheKey, file)
+				err = repo.cache.SAdd(userIDCacheKey, jsonData)
 				if err != nil {
 					return nil, -1, errors.New("set cache failed")
 				}
@@ -564,7 +573,7 @@ func (repo *mysqlFileRepo) FindByParentID(ctx context.Context, parentID *uint, u
 
 				// parentID - files
 				parentIDCacheKey := fmt.Sprintf("parentID:%d", file.ParentID)
-				err = repo.cache.SAdd(parentIDCacheKey, file)
+				err = repo.cache.SAdd(parentIDCacheKey, jsonData)
 				if err != nil {
 					return nil, -1, errors.New("set cache failed")
 				}
