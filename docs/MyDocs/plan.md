@@ -81,7 +81,6 @@
     - [x] swagger
     - [x] apiFox文档
     - [x] README.md
-- [ ] Dockerfile
-- [ ] Docker-compose
+- [x] Dockerfile
+- [x] Docker-compose
 - [ ] vibe 前端 - gemini
-- [ ] 项目(带前端)本地部署测试 
