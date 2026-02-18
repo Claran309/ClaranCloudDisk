@@ -4,8 +4,10 @@ import (
 	"time"
 )
 
+// Config JWT配置
+// @Description JWT配置信息
 type Config struct {
-	Issuer         string
-	SecretKey      string
-	ExpirationTime time.Duration
+	Issuer         string        `example:"ClaranCloudDisk"`
+	SecretKey      string        `example:"your-secret-key"`
+	ExpirationTime time.Duration `example:"3600000000000"`
 }

@@ -1,6 +1,7 @@
 package model
 
 // User mysql-gorm
+// @Description 用户信息模型
 type User struct {
 	UserID                     int    `json:"user_id" gorm:"primary_key;AUTO_INCREMENT;column:user_id"`
 	Username                   string `json:"username" gorm:"column:username;uniqueIndex;type:varchar(50)"`

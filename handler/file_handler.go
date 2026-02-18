@@ -27,6 +27,21 @@ func NewFileHandler(fileService *services.FileService, minioClient *minIO.MinIOC
 	}
 }
 
+// Upload godoc
+// @Summary 上传文件
+// @Description 上传单个文件到云盘
+// @Tags 文件管理
+// @Accept multipart/form-data
+// @Produce json
+// @Security BearerAuth
+// @Param file formData file true "文件"
+// @Success 200 {object} map[string]interface{} "上传成功"
+// @Failure 400 {object} map[string]interface{} "请求参数错误"
+// @Failure 401 {object} map[string]interface{} "未授权"
+// @Failure 413 {object} map[string]interface{} "文件太大"
+// @Failure 415 {object} map[string]interface{} "不支持的文件类型"
+// @Failure 500 {object} map[string]interface{} "服务器内部错误"
+// @Router /file/upload [post]
 func (h *FileHandler) Upload(c *gin.Context) {
 	zap.L().Info("上传文件请求开始",
 		zap.String("url", c.Request.RequestURI),
@@ -74,6 +89,25 @@ func (h *FileHandler) Upload(c *gin.Context) {
 	}}, "文件上传成功")
 }
 
+// ChunkUpload godoc
+// @Summary 分片上传文件
+// @Description 分片上传大文件，支持断点续传
+// @Tags 文件管理
+// @Accept multipart/form-data
+// @Produce json
+// @Security BearerAuth
+// @Param chunk formData file true "文件分片"
+// @Param chunk_index formData int true "分片索引（从0开始）"
+// @Param chunk_total formData int true "总分片数"
+// @Param file_hash formData string true "文件哈希值"
+// @Param file_name formData string true "文件名"
+// @Param file_mime_type formData string true "文件MIME类型"
+// @Success 200 {object} map[string]interface{} "分片上传成功"
+// @Success 200 {object} map[string]interface{} "文件上传完成"
+// @Failure 400 {object} map[string]interface{} "请求参数错误"
+// @Failure 401 {object} map[string]interface{} "未授权"
+// @Failure 500 {object} map[string]interface{} "服务器内部错误"
+// @Router /file/chunk_upload [post]
 func (h *FileHandler) ChunkUpload(c *gin.Context) {
 	zap.L().Info("上传分片请求开始",
 		zap.String("url", c.Request.RequestURI),
@@ -190,6 +224,19 @@ func (h *FileHandler) ChunkUpload(c *gin.Context) {
 	}, "分片上传成功")
 }
 
+// GetChunkStatus godoc
+// @Summary 获取分片上传状态
+// @Description 查询文件分片上传的进度状态，用于断点续传
+// @Tags 文件管理
+// @Accept multipart/form-data
+// @Produce json
+// @Security BearerAuth
+// @Param file_hash formData string true "文件哈希值"
+// @Success 200 {object} map[string]interface{} "查询成功"
+// @Failure 400 {object} map[string]interface{} "请求参数错误"
+// @Failure 401 {object} map[string]interface{} "未授权"
+// @Failure 500 {object} map[string]interface{} "服务器内部错误"
+// @Router /file/chunk_upload/status [get]
 func (h *FileHandler) GetChunkStatus(c *gin.Context) {
 	zap.L().Info("获取分片状态请求开始",
 		zap.String("url", c.Request.RequestURI),
@@ -225,6 +272,20 @@ func (h *FileHandler) GetChunkStatus(c *gin.Context) {
 }
 
 // Download /:id/download
+// Download godoc
+// @Summary 下载文件
+// @Description 下载文件，支持限速（非VIP用户）
+// @Tags 文件管理
+// @Produce application/octet-stream
+// @Security BearerAuth
+// @Param id path int true "文件ID"
+// @Success 200 {file} binary "文件流"
+// @Failure 400 {object} map[string]interface{} "请求参数错误"
+// @Failure 401 {object} map[string]interface{} "未授权"
+// @Failure 403 {object} map[string]interface{} "无访问权限"
+// @Failure 404 {object} map[string]interface{} "文件不存在"
+// @Failure 500 {object} map[string]interface{} "服务器内部错误"
+// @Router /file/{id}/download [get]
 func (h *FileHandler) Download(c *gin.Context) {
 	zap.L().Info("下载请求开始",
 		zap.String("url", c.Request.RequestURI),
@@ -395,6 +456,20 @@ func (h *FileHandler) Download(c *gin.Context) {
 }
 
 // GetFileInfo /:id
+// GetFileInfo godoc
+// @Summary 获取文件详细信息
+// @Description 获取指定文件的详细信息
+// @Tags 文件管理
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "文件ID"
+// @Success 200 {object} map[string]interface{} "获取成功"
+// @Failure 400 {object} map[string]interface{} "请求参数错误"
+// @Failure 401 {object} map[string]interface{} "未授权"
+// @Failure 403 {object} map[string]interface{} "无访问权限"
+// @Failure 404 {object} map[string]interface{} "文件不存在"
+// @Failure 500 {object} map[string]interface{} "服务器内部错误"
+// @Router /file/{id} [get]
 func (h *FileHandler) GetFileInfo(c *gin.Context) {
 	zap.L().Info("获取文件信息请求开始",
 		zap.String("url", c.Request.RequestURI),
@@ -427,6 +502,16 @@ func (h *FileHandler) GetFileInfo(c *gin.Context) {
 	util.Success(c, gin.H{"data": file}, "获取成功")
 }
 
+// GetFileList godoc
+// @Summary 获取文件列表
+// @Description 获取当前登录用户的文件列表
+// @Tags 文件管理
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{} "获取成功"
+// @Failure 401 {object} map[string]interface{} "未授权"
+// @Failure 500 {object} map[string]interface{} "服务器内部错误"
+// @Router /file/list [get]
 func (h *FileHandler) GetFileList(c *gin.Context) {
 	zap.L().Info("获取文件列表请求开始",
 		zap.String("url", c.Request.RequestURI),
@@ -457,6 +542,20 @@ func (h *FileHandler) GetFileList(c *gin.Context) {
 }
 
 // Delete /:id
+// Delete godoc
+// @Summary 直接删除文件
+// @Description 永久删除指定文件
+// @Tags 文件管理
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "文件ID"
+// @Success 200 {object} map[string]interface{} "删除成功"
+// @Failure 400 {object} map[string]interface{} "请求参数错误"
+// @Failure 401 {object} map[string]interface{} "未授权"
+// @Failure 403 {object} map[string]interface{} "无访问权限"
+// @Failure 404 {object} map[string]interface{} "文件不存在"
+// @Failure 500 {object} map[string]interface{} "服务器内部错误"
+// @Router /file/{id}/delete/tough [delete]
 func (h *FileHandler) Delete(c *gin.Context) {
 	zap.L().Info("删除文件请求开始",
 		zap.String("url", c.Request.RequestURI),
@@ -488,6 +587,16 @@ func (h *FileHandler) Delete(c *gin.Context) {
 	util.Success(c, gin.H{}, "删除成功")
 }
 
+// GetStarList godoc
+// @Summary 获取收藏文件列表
+// @Description 获取当前登录用户的收藏文件列表
+// @Tags 文件管理
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{} "获取成功"
+// @Failure 401 {object} map[string]interface{} "未授权"
+// @Failure 500 {object} map[string]interface{} "服务器内部错误"
+// @Router /file/star_list [get]
 func (h *FileHandler) GetStarList(c *gin.Context) {
 	zap.L().Info("获取收藏列表请求开始",
 		zap.String("url", c.Request.RequestURI),
@@ -517,6 +626,20 @@ func (h *FileHandler) GetStarList(c *gin.Context) {
 	}, "获取成功")
 }
 
+// Star godoc
+// @Summary 收藏文件
+// @Description 收藏指定文件
+// @Tags 文件管理
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "文件ID"
+// @Success 200 {object} map[string]interface{} "收藏成功"
+// @Failure 400 {object} map[string]interface{} "请求参数错误"
+// @Failure 401 {object} map[string]interface{} "未授权"
+// @Failure 403 {object} map[string]interface{} "无访问权限"
+// @Failure 404 {object} map[string]interface{} "文件不存在"
+// @Failure 500 {object} map[string]interface{} "服务器内部错误"
+// @Router /file/{id}/star [post]
 func (h *FileHandler) Star(c *gin.Context) {
 	zap.L().Info("收藏文件请求开始",
 		zap.String("url", c.Request.RequestURI),
@@ -545,6 +668,20 @@ func (h *FileHandler) Star(c *gin.Context) {
 	}, "收藏成功")
 }
 
+// Unstar godoc
+// @Summary 取消收藏文件
+// @Description 取消收藏指定文件
+// @Tags 文件管理
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "文件ID"
+// @Success 200 {object} map[string]interface{} "取消收藏成功"
+// @Failure 400 {object} map[string]interface{} "请求参数错误"
+// @Failure 401 {object} map[string]interface{} "未授权"
+// @Failure 403 {object} map[string]interface{} "无访问权限"
+// @Failure 404 {object} map[string]interface{} "文件不存在"
+// @Failure 500 {object} map[string]interface{} "服务器内部错误"
+// @Router /file/{id}/Unstar [post]
 func (h *FileHandler) Unstar(c *gin.Context) {
 	zap.L().Info("取消收藏文件请求开始",
 		zap.String("url", c.Request.RequestURI),
@@ -574,6 +711,22 @@ func (h *FileHandler) Unstar(c *gin.Context) {
 }
 
 // Rename /:id/rename
+// Rename godoc
+// @Summary 重命名文件
+// @Description 重命名指定文件
+// @Tags 文件管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "文件ID"
+// @Param request body model.RenameRequest true "重命名请求参数"
+// @Success 200 {object} map[string]interface{} "重命名成功"
+// @Failure 400 {object} map[string]interface{} "请求参数错误"
+// @Failure 401 {object} map[string]interface{} "未授权"
+// @Failure 403 {object} map[string]interface{} "无访问权限"
+// @Failure 404 {object} map[string]interface{} "文件不存在"
+// @Failure 500 {object} map[string]interface{} "服务器内部错误"
+// @Router /file/{id}/rename [put]
 func (h *FileHandler) Rename(c *gin.Context) {
 	zap.L().Info("重命名文件请求开始",
 		zap.String("url", c.Request.RequestURI),
@@ -614,6 +767,20 @@ func (h *FileHandler) Rename(c *gin.Context) {
 	}, "重命名成功")
 }
 
+// Preview godoc
+// @Summary 预览文件
+// @Description 预览指定文件（支持图片、视频、音频、文档等多种格式）
+// @Tags 文件管理
+// @Security BearerAuth
+// @Param id path int true "文件ID"
+// @Success 200 {file} binary "文件预览"
+// @Failure 400 {object} map[string]interface{} "请求参数错误"
+// @Failure 401 {object} map[string]interface{} "未授权"
+// @Failure 403 {object} map[string]interface{} "无访问权限"
+// @Failure 404 {object} map[string]interface{} "文件不存在"
+// @Failure 415 {object} map[string]interface{} "不支持的文件类型"
+// @Failure 500 {object} map[string]interface{} "服务器内部错误"
+// @Router /file/{id}/preview [get]
 func (h *FileHandler) Preview(c *gin.Context) {
 	zap.L().Info("预览文件请求开始",
 		zap.String("url", c.Request.RequestURI),
@@ -928,6 +1095,20 @@ func (h *FileHandler) PreText(c *gin.Context, file *model.File) {
 //	c.File(file.Path)
 //}
 
+// GetPreInfo godoc
+// @Summary 获取文件预览信息
+// @Description 获取指定文件的预览信息，包括文件类型、MIME类型、是否可以预览等
+// @Tags 文件管理
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "文件ID"
+// @Success 200 {object} map[string]interface{} "获取成功"
+// @Failure 400 {object} map[string]interface{} "请求参数错误"
+// @Failure 401 {object} map[string]interface{} "未授权"
+// @Failure 403 {object} map[string]interface{} "无访问权限"
+// @Failure 404 {object} map[string]interface{} "文件不存在"
+// @Failure 500 {object} map[string]interface{} "服务器内部错误"
+// @Router /file/{id}/preview_info [get]
 func (h *FileHandler) GetPreInfo(c *gin.Context) {
 	zap.L().Info("获取文件预览信息请求开始",
 		zap.String("url", c.Request.RequestURI),
@@ -1036,6 +1217,19 @@ func (h *FileHandler) GetPreInfo(c *gin.Context) {
 	}, "获取预览信息成功")
 }
 
+// SearchFile godoc
+// @Summary 搜索文件
+// @Description 在当前用户的文件中搜索指定关键词
+// @Tags 文件管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body model.SearchFileRequest true "搜索请求参数"
+// @Success 200 {object} map[string]interface{} "搜索成功"
+// @Failure 400 {object} map[string]interface{} "请求参数错误"
+// @Failure 401 {object} map[string]interface{} "未授权"
+// @Failure 500 {object} map[string]interface{} "服务器内部错误"
+// @Router /file/search [post]
 func (h *FileHandler) SearchFile(c *gin.Context) {
 	zap.L().Info("搜索文件请求开始",
 		zap.String("url", c.Request.RequestURI),
@@ -1068,6 +1262,20 @@ func (h *FileHandler) SearchFile(c *gin.Context) {
 	}, "搜索成功")
 }
 
+// SoftDelete godoc
+// @Summary 软删除文件
+// @Description 将文件移至回收站（软删除）
+// @Tags 文件管理
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "文件ID"
+// @Success 200 {object} map[string]interface{} "软删除成功"
+// @Failure 400 {object} map[string]interface{} "请求参数错误"
+// @Failure 401 {object} map[string]interface{} "未授权"
+// @Failure 403 {object} map[string]interface{} "无访问权限"
+// @Failure 404 {object} map[string]interface{} "文件不存在"
+// @Failure 500 {object} map[string]interface{} "服务器内部错误"
+// @Router /file/{id}/delete/soft [put]
 func (h *FileHandler) SoftDelete(c *gin.Context) {
 	zap.L().Info("软删除文件请求开始",
 		zap.String("url", c.Request.RequestURI),
@@ -1102,6 +1310,20 @@ func (h *FileHandler) SoftDelete(c *gin.Context) {
 	}, "软删除成功")
 }
 
+// RecoverFile godoc
+// @Summary 恢复文件
+// @Description 从回收站恢复已软删除的文件
+// @Tags 文件管理
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "文件ID"
+// @Success 200 {object} map[string]interface{} "恢复成功"
+// @Failure 400 {object} map[string]interface{} "请求参数错误"
+// @Failure 401 {object} map[string]interface{} "未授权"
+// @Failure 403 {object} map[string]interface{} "无访问权限"
+// @Failure 404 {object} map[string]interface{} "文件不存在"
+// @Failure 500 {object} map[string]interface{} "服务器内部错误"
+// @Router /file/{id}/delete/recovery [put]
 func (h *FileHandler) RecoverFile(c *gin.Context) {
 	zap.L().Info("恢复文件请求开始",
 		zap.String("url", c.Request.RequestURI),
@@ -1134,6 +1356,16 @@ func (h *FileHandler) RecoverFile(c *gin.Context) {
 	}, "恢复文件成功")
 }
 
+// GetBinList godoc
+// @Summary 获取回收站文件列表
+// @Description 获取当前登录用户回收站中的文件列表
+// @Tags 文件管理
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{} "获取成功"
+// @Failure 401 {object} map[string]interface{} "未授权"
+// @Failure 500 {object} map[string]interface{} "服务器内部错误"
+// @Router /file/bin [get]
 func (h *FileHandler) GetBinList(c *gin.Context) {
 	zap.L().Info("获取回收站文件列表请求开始",
 		zap.String("url", c.Request.RequestURI),

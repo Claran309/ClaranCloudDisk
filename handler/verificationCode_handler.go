@@ -18,6 +18,18 @@ func NewVerificationHandler(verificationService *services.VerificationService) *
 	return &VerificationHandler{verificationService: *verificationService}
 }
 
+// GetVerificationCode godoc
+// @Summary 获取邮箱验证码
+// @Description 向指定邮箱发送验证码
+// @Tags 用户管理
+// @Accept json
+// @Produce json
+// @Param request body model.GetVerificationCodeRequest true "获取验证码请求参数"
+// @Success 200 {object} map[string]interface{} "验证码发送成功"
+// @Failure 400 {object} map[string]interface{} "请求参数错误"
+// @Failure 429 {object} map[string]interface{} "请求过于频繁"
+// @Failure 500 {object} map[string]interface{} "服务器内部错误"
+// @Router /user/get_verification_code [post]
 func (h *VerificationHandler) GetVerificationCode(c *gin.Context) {
 	zap.L().Info("获取验证码请求开始",
 		zap.String("url", c.Request.RequestURI),
@@ -51,6 +63,17 @@ func (h *VerificationHandler) GetVerificationCode(c *gin.Context) {
 	}, "验证码发送成功")
 }
 
+// VerifyVerificationCode godoc
+// @Summary 验证邮箱验证码
+// @Description 验证邮箱接收到的验证码
+// @Tags 用户管理
+// @Accept json
+// @Produce json
+// @Param request body model.VerifyVerificationCodeRequest true "验证验证码请求参数"
+// @Success 200 {object} map[string]interface{} "验证成功"
+// @Failure 400 {object} map[string]interface{} "请求参数错误或验证码错误"
+// @Failure 500 {object} map[string]interface{} "服务器内部错误"
+// @Router /user/verify_verification_code [post]
 func (h *VerificationHandler) VerifyVerificationCode(c *gin.Context) {
 	zap.L().Info("验证验证码请求开始",
 		zap.String("url", c.Request.RequestURI),

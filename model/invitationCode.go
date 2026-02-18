@@ -2,6 +2,8 @@ package model
 
 import "time"
 
+// InvitationCode 邀请码模型
+// @Description 邀请码信息
 type InvitationCode struct {
 	ID            int    `json:"id" gorm:"primary_key;AUTO_INCREMENT"`
 	Code          string `json:"code" gorm:"column:code;type:varchar(50)"`

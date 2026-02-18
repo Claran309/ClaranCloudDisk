@@ -30,6 +30,18 @@ func NewUserHandler(userService *services.UserService, DefaultAvatarPath string,
 	}
 }
 
+// Register godoc
+// @Summary 用户注册
+// @Description 用户注册接口，创建新用户账号
+// @Tags 用户管理
+// @Accept json
+// @Produce json
+// @Param request body model.RegisterRequest true "注册请求参数"
+// @Success 200 {object} util.Response "注册成功"
+// @Failure 400 {object} util.Response "请求参数错误"
+// @Failure 409 {object} util.Response "用户名或邮箱已存在"
+// @Failure 500 {object} util.Response "服务器内部错误"
+// @Router /user/register [post]
 func (h *UserHandler) Register(c *gin.Context) {
 	zap.L().Info("注册请求开始",
 		zap.String("url", c.Request.RequestURI),
@@ -66,6 +78,17 @@ func (h *UserHandler) Register(c *gin.Context) {
 	}, "RegisterRequest registered successfully")
 }
 
+// Login godoc
+// @Summary 用户登录
+// @Description 用户登录接口，返回访问令牌和刷新令牌
+// @Tags 用户管理
+// @Accept json
+// @Produce json
+// @Param request body model.LoginRequest true "登录请求参数"
+// @Success 200 {object} map[string]interface{} "登录成功"
+// @Failure 400 {object} map[string]interface{} "请求参数错误"
+// @Failure 500 {object} map[string]interface{} "服务器内部错误"
+// @Router /user/login [post]
 func (h *UserHandler) Login(c *gin.Context) {
 	zap.L().Info("登录请求开始",
 		zap.String("url", c.Request.RequestURI),
@@ -102,6 +125,17 @@ func (h *UserHandler) Login(c *gin.Context) {
 	}, "login successful")
 }
 
+// InfoHandler godoc
+// @Summary 获取个人信息
+// @Description 获取当前登录用户的个人信息
+// @Tags 用户管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{} "获取成功"
+// @Failure 401 {object} map[string]interface{} "未授权"
+// @Failure 500 {object} map[string]interface{} "服务器内部错误"
+// @Router /user/info [get]
 func (h *UserHandler) InfoHandler(c *gin.Context) {
 	zap.L().Info("获取个人信息请求开始",
 		zap.String("url", c.Request.RequestURI),
@@ -132,6 +166,17 @@ func (h *UserHandler) InfoHandler(c *gin.Context) {
 	}, "Your information")
 }
 
+// Refresh godoc
+// @Summary 刷新访问令牌
+// @Description 使用刷新令牌获取新的访问令牌
+// @Tags 用户管理
+// @Accept json
+// @Produce json
+// @Param request body model.RefreshTokenRequest true "刷新令牌请求参数"
+// @Success 200 {object} map[string]interface{} "刷新成功"
+// @Failure 400 {object} map[string]interface{} "请求参数错误"
+// @Failure 500 {object} map[string]interface{} "服务器内部错误"
+// @Router /user/refresh [post]
 func (h *UserHandler) Refresh(c *gin.Context) {
 	zap.L().Info("刷新token请求开始",
 		zap.String("url", c.Request.RequestURI),
@@ -164,6 +209,19 @@ func (h *UserHandler) Refresh(c *gin.Context) {
 	}, "RefreshToken successfully")
 }
 
+// Logout godoc
+// @Summary 用户登出
+// @Description 用户登出，使当前令牌失效
+// @Tags 用户管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body model.LogoutRequest true "登出请求参数"
+// @Success 200 {object} map[string]interface{} "登出成功"
+// @Failure 400 {object} map[string]interface{} "请求参数错误"
+// @Failure 401 {object} map[string]interface{} "未授权"
+// @Failure 500 {object} map[string]interface{} "服务器内部错误"
+// @Router /user/logout [post]
 func (h *UserHandler) Logout(c *gin.Context) {
 	zap.L().Info("登出请求开始",
 		zap.String("url", c.Request.RequestURI),
@@ -196,6 +254,19 @@ func (h *UserHandler) Logout(c *gin.Context) {
 	}, "Logout successfully")
 }
 
+// Update godoc
+// @Summary 更新用户信息
+// @Description 更新当前登录用户的个人信息
+// @Tags 用户管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body model.UpdateRequest true "更新用户信息请求参数"
+// @Success 200 {object} map[string]interface{} "更新成功"
+// @Failure 400 {object} map[string]interface{} "请求参数错误"
+// @Failure 401 {object} map[string]interface{} "未授权"
+// @Failure 500 {object} map[string]interface{} "服务器内部错误"
+// @Router /user/update [put]
 func (h *UserHandler) Update(c *gin.Context) {
 	zap.L().Info("更新用户信息请求开始",
 		zap.String("url", c.Request.RequestURI),
@@ -232,6 +303,17 @@ func (h *UserHandler) Update(c *gin.Context) {
 	}, "Update information successfully")
 }
 
+// GenerateInvitationCode godoc
+// @Summary 生成邀请码
+// @Description 为当前登录用户生成一个新的邀请码
+// @Tags 用户管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{} "生成成功"
+// @Failure 401 {object} map[string]interface{} "未授权"
+// @Failure 500 {object} map[string]interface{} "服务器内部错误"
+// @Router /user/generate_invitation_code [get]
 func (h *UserHandler) GenerateInvitationCode(c *gin.Context) {
 	zap.L().Info("生成邀请码请求开始",
 		zap.String("url", c.Request.RequestURI),
@@ -258,6 +340,17 @@ func (h *UserHandler) GenerateInvitationCode(c *gin.Context) {
 	}, "generate invitation code successfully")
 }
 
+// InvitationCodeList godoc
+// @Summary 获取邀请码列表
+// @Description 获取当前登录用户生成的所有邀请码列表
+// @Tags 用户管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{} "获取成功"
+// @Failure 401 {object} map[string]interface{} "未授权"
+// @Failure 500 {object} map[string]interface{} "服务器内部错误"
+// @Router /user/invitation_code_list [get]
 func (h *UserHandler) InvitationCodeList(c *gin.Context) {
 	zap.L().Info("获取邀请码列表请求开始",
 		zap.String("url", c.Request.RequestURI),
@@ -285,6 +378,21 @@ func (h *UserHandler) InvitationCodeList(c *gin.Context) {
 	}, "获取成功")
 }
 
+// UploadAvatar godoc
+// @Summary 上传头像
+// @Description 上传当前登录用户的头像文件
+// @Tags 用户管理
+// @Accept multipart/form-data
+// @Produce json
+// @Security BearerAuth
+// @Param avatar formData file true "头像文件"
+// @Success 200 {object} map[string]interface{} "上传成功"
+// @Failure 400 {object} map[string]interface{} "请求参数错误"
+// @Failure 401 {object} map[string]interface{} "未授权"
+// @Failure 413 {object} map[string]interface{} "文件太大"
+// @Failure 415 {object} map[string]interface{} "不支持的文件类型"
+// @Failure 500 {object} map[string]interface{} "服务器内部错误"
+// @Router /user/upload_avatar [post]
 func (h *UserHandler) UploadAvatar(c *gin.Context) {
 	zap.L().Info("上传头像请求开始",
 		zap.String("url", c.Request.RequestURI),
@@ -321,6 +429,17 @@ func (h *UserHandler) UploadAvatar(c *gin.Context) {
 	}, "头像上传成功")
 }
 
+// GetAvatar godoc
+// @Summary 获取当前用户头像
+// @Description 获取当前登录用户的头像
+// @Tags 用户管理
+// @Produce image/jpeg,image/png,image/gif,image/webp,image/*
+// @Security BearerAuth
+// @Success 200 {file} binary "头像文件"
+// @Failure 401 {object} map[string]interface{} "未授权"
+// @Failure 404 {object} map[string]interface{} "头像不存在"
+// @Failure 500 {object} map[string]interface{} "服务器内部错误"
+// @Router /user/get_avatar [get]
 func (h *UserHandler) GetAvatar(c *gin.Context) {
 	zap.L().Info("获取头像请求开始",
 		zap.String("url", c.Request.RequestURI),
@@ -396,6 +515,17 @@ func (h *UserHandler) GetAvatar(c *gin.Context) {
 	//=====================================================
 }
 
+// GetUniqueAvatar godoc
+// @Summary 获取指定用户头像
+// @Description 根据用户ID获取用户的头像
+// @Tags 用户管理
+// @Produce image/jpeg,image/png,image/gif,image/webp,image/*
+// @Param id path int true "用户ID"
+// @Success 200 {file} binary "头像文件"
+// @Failure 400 {object} map[string]interface{} "用户ID无效"
+// @Failure 404 {object} map[string]interface{} "用户不存在或头像不存在"
+// @Failure 500 {object} map[string]interface{} "服务器内部错误"
+// @Router /user/{id}/get_avatar [get]
 func (h *UserHandler) GetUniqueAvatar(c *gin.Context) {
 	zap.L().Info("获取指定用户头像请求开始",
 		zap.String("url", c.Request.RequestURI),
