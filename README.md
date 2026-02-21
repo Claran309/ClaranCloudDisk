@@ -8,13 +8,16 @@ ClaranCloudDisk 是一个基于 Go 语言开发的轻量级云盘后端服务，
 
 > 注：README,swagger注释,dockerfile和docker-compose由AI生成
 
+**[项目总结博客](https://www.claran-blog.work/2026/02/20/%E7%BD%91%E7%9B%98%E5%90%8E%E7%AB%AF%E9%A1%B9%E7%9B%AE%E7%9A%84%E7%9B%B8%E5%85%B3%E5%8A%9F%E8%83%BD%E6%80%9D%E8%B7%AF-%E5%AE%9E%E7%8E%B0/)**
+
 ## 📄 相关文档
-| 文档                                                                                       | 备注        |
-|------------------------------------------------------------------------------------------|-----------|
-| [plan.md](https://github.com/Claran309/ClaranCloudDisk/blob/main/docs/MyDocs/plan.md)           | 项目规划文档    |
-| [Description.md](https://github.com/Claran309/ClaranCloudDisk/blob/main/docs/MyDocs/API_doc.md) | 项目说明文档    |
-| [Swagger文档](http://localhost:8080/swagger/index.html)                                    | Swagger文档 |
-| [APIFox接口文档](https://s.apifox.cn/eb440c56-e09f-4266-9843-3c8f1ae205c3)                   | APIFox接口文档 |
+| 文档                                                                                                                                                                                                | 备注         |
+|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------|
+| [plan.md](https://github.com/Claran309/ClaranCloudDisk/blob/main/docs/MyDocs/plan.md)                                                                                                             | 项目规划文档     |
+| [Description.md](https://github.com/Claran309/ClaranCloudDisk/blob/main/docs/MyDocs/API_doc.md)                                                                                                   | 项目说明文档     |
+| [Swagger文档](http://localhost:8080/swagger/index.html)                                                                                                                                             | Swagger文档  |
+| [APIFox接口文档](https://s.apifox.cn/eb440c56-e09f-4266-9843-3c8f1ae205c3)                                                                                                                            | APIFox接口文档 |
+| **[项目总结博客文章](https://www.claran-blog.work/2026/02/20/%E7%BD%91%E7%9B%98%E5%90%8E%E7%AB%AF%E9%A1%B9%E7%9B%AE%E7%9A%84%E7%9B%B8%E5%85%B3%E5%8A%9F%E8%83%BD%E6%80%9D%E8%B7%AF-%E5%AE%9E%E7%8E%B0/)** | 项目总结       |
 
 ## ✨ 功能特性
 
