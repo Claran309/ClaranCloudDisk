@@ -45,7 +45,7 @@ func (rc *RedisClient) Get(key string, dest interface{}) error {
 	data, err := rc.client.Get(rc.ctx, key).Result()
 	if err != nil {
 		if err == redis.Nil {
-			zap.S().Errorf("缓存 %s 未命中: %v", key, err)
+			zap.S().Warnf("缓存 %s 未命中: %v", key, err)
 			return err
 		}
 		zap.S().Errorf("缓存 %s 获取失败: %v", key, err)
