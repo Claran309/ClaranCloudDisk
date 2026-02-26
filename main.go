@@ -126,7 +126,7 @@ func main() {
 		zap.Int("port", cfg.Port))
 	user := r.Group("/user")
 	user.Use(securityMiddleware.SecurityMiddleware())
-	user.Use(securityMiddleware.RateLimitedMiddleware())
+	user.Use(securityMiddleware.UserRateLimitMiddleware())
 	user.POST("/register", userHandler.Register)                                                                 // 注册
 	user.POST("/login", userHandler.Login)                                                                       // 登录
 	user.POST("/refresh", userHandler.Refresh)                                                                   // 刷新token
@@ -148,7 +148,7 @@ func main() {
 		zap.Int("port", cfg.Port))
 	file := r.Group("/file")
 	file.Use(securityMiddleware.SecurityMiddleware())
-	file.Use(securityMiddleware.RateLimitedMiddleware())
+	file.Use(securityMiddleware.UserRateLimitMiddleware())
 	file.Use(jwtMiddleware.JWTAuthentication())
 	file.POST("/upload", fileHandler.Upload)                     // 上传文件
 	file.POST("/chunk_upload", fileHandler.ChunkUpload)          // 分片上传文件
@@ -176,7 +176,7 @@ func main() {
 	//下载或转存全部文件 = 逐个下载share下的全部文件
 	share := r.Group("/share")
 	share.Use(securityMiddleware.SecurityMiddleware())
-	share.Use(securityMiddleware.RateLimitedMiddleware())
+	share.Use(securityMiddleware.UserRateLimitMiddleware())
 	share.Use(jwtMiddleware.JWTAuthentication())
 	share.POST("/create", shareHandler.CreateShare)                           // 新建分享
 	share.GET("/mine", shareHandler.CheckMine)                                // 查看自己的分享列表
@@ -191,7 +191,7 @@ func main() {
 		zap.Int("port", cfg.Port))
 	admin := r.Group("/admin")
 	admin.Use(securityMiddleware.SecurityMiddleware())
-	admin.Use(securityMiddleware.RateLimitedMiddleware())
+	admin.Use(securityMiddleware.UserRateLimitMiddleware())
 	admin.Use(jwtMiddleware.JWTAuthentication())                // 登录
 	admin.Use(jwtMiddleware.JWTAuthorization())                 // admin鉴权
 	admin.GET("/info", adminHandler.GetInfo)                    // 获取资源信息

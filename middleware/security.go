@@ -3,6 +3,7 @@ package middleware
 import (
 	"ClaranCloudDisk/util"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -18,6 +19,40 @@ func NewSecurity(maxRequestsEveryMinute int) *Security {
 	return &Security{maxRequestsEveryMinute: maxRequestsEveryMinute}
 }
 
+// UserRateLimitMiddleware 用户级限流
+func (s *Security) UserRateLimitMiddleware() gin.HandlerFunc {
+	var (
+		buckets = make(map[string]*util.TokenBucket)
+		mu      sync.Mutex
+	)
+
+	return func(c *gin.Context) {
+		// 获取用户IP
+		userIP := c.ClientIP()
+
+		// 令牌桶
+		mu.Lock()
+		bucket, ok := buckets[userIP]
+		// 如果没有令牌桶，创建令牌桶
+		if !ok {
+			bucket = util.NewTokenBucket(50, 1)
+			buckets[userIP] = bucket
+		}
+		mu.Unlock()
+
+		// 令牌检查
+		if !bucket.Allow() {
+			zap.S().Errorf("请求过于频繁，请稍候再试")
+			util.Error(c, http.StatusTooManyRequests, "请求过于频繁，请稍候再试")
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
+}
+
+// RateLimitedMiddleware 全局限流
 func (s *Security) RateLimitedMiddleware() gin.HandlerFunc {
 	maxRequestsEveryMinute := s.maxRequestsEveryMinute
 
