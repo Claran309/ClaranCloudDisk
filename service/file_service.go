@@ -44,7 +44,7 @@ func NewUFileService(fileRepo mysql.FileRepository, userRepo mysql.UserRepositor
 func (s *FileService) Upload(ctx context.Context, userID int, file multipart.File, fileHeader *multipart.FileHeader) (*model.File, error) {
 	isVIP, err := s.UserRepo.GetVIP(userID)
 	if err != nil {
-		return nil, fmt.Errorf("获取用户信息失败")
+		return nil, fmt.Errorf("获取用户信息失败:%v", err)
 	}
 
 	// 验证单个文件大小
@@ -55,7 +55,7 @@ func (s *FileService) Upload(ctx context.Context, userID int, file multipart.Fil
 	// 验证用户是否拥有足够存储空间
 	userStorage, err := s.UserRepo.GetStorage(userID)
 	if err != nil {
-		return nil, fmt.Errorf("获取用户信息失败")
+		return nil, fmt.Errorf("获取用户信息失败" + err.Error())
 	}
 	if !isVIP && fileHeader.Size+userStorage > s.NormalUserMaxStorage {
 		return nil, fmt.Errorf("非VIP用户总存储空间已超额！")
@@ -150,7 +150,7 @@ func (s *FileService) Download(ctx context.Context, userID int, fileID int64) (*
 	}
 	isVIP, err := s.UserRepo.GetVIP(userID)
 	if err != nil {
-		return nil, -1, fmt.Errorf("获取用户信息失败")
+		return nil, -1, fmt.Errorf("获取用户信息失败" + err.Error())
 	}
 	LimitedSpeed := s.LimitedSpeed
 	user, _ := s.UserRepo.SelectByUserID(int(userID))
@@ -166,7 +166,7 @@ func (s *FileService) Download(ctx context.Context, userID int, fileID int64) (*
 	//检查是否存在
 	exist, err := s.minioClient.Exists(ctx, file.Path)
 	if err != nil || !exist {
-		return nil, -1, fmt.Errorf("文件已丢失")
+		return nil, -1, fmt.Errorf("文件已丢失:%v", err)
 	}
 
 	//=============================================================================================================
@@ -343,7 +343,7 @@ func (s *FileService) CreateName(name string, userID uint) string {
 func (s *FileService) Save(file multipart.File, filePath string) error {
 	fileData, err := io.ReadAll(file)
 	if err != nil {
-		return errors.New("读取文件失败")
+		return errors.New("读取文件失败" + err.Error())
 	}
 	ext := filepath.Ext(filePath)
 	if err := s.minioClient.Save(context.Background(), filePath, fileData, ext); err != nil {
@@ -470,7 +470,7 @@ func (s *FileService) SaveChunk(fileHash string, userID int, chunkIndex int, chu
 	err := s.FileRepo.CheckChunkUploadSession(fileHash)
 	if err != nil {
 		if err.Error() == "redis: nil" {
-			return errors.New("上传会话已过期，请重新上传")
+			return errors.New("上传会话已过期，请重新上传" + err.Error())
 		}
 		return fmt.Errorf("访问缓存失败: %v", err)
 	}
@@ -598,7 +598,7 @@ func (s *FileService) MergeChunks(userID int, fileHash string, filename string, 
 	//获取字节数据
 	finalFileData, err := io.ReadAll(finalFile)
 	if err != nil {
-		return "", -1, "", errors.New("读取合并文件失败")
+		return "", -1, "", errors.New("读取合并文件失败" + err.Error())
 	}
 
 	//保存到minIO

@@ -246,7 +246,7 @@ func (h *FileHandler) GetChunkStatus(c *gin.Context) {
 	fileHash := c.PostForm("file_hash")
 	if fileHash == "" {
 		zap.S().Errorf("缺少filehash参数")
-		util.Error(c, 500, "缺少fileHash参数")
+		util.Error(c, 400, "缺少fileHash参数")
 		return
 	}
 
@@ -845,7 +845,7 @@ func (h *FileHandler) Preview(c *gin.Context) {
 		h.PreText(c, file) // // 其他类型尝试作为文本预览
 	default:
 		zap.S().Errorf("未解析的文件类型: %s", fileType)
-		util.Error(c, 500, "未解析的文件类型")
+		util.Error(c, 400, "未解析的文件类型")
 		return
 	}
 	zap.L().Info("预览文件请求结束",
@@ -1240,7 +1240,7 @@ func (h *FileHandler) SearchFile(c *gin.Context) {
 	var req model.SearchFileRequest
 	if err := c.ShouldBind(&req); err != nil {
 		zap.S().Errorf("绑定请求体失败: %v", err)
-		util.Error(c, 500, err.Error())
+		util.Error(c, 400, err.Error())
 	}
 
 	//服务层
@@ -1286,7 +1286,7 @@ func (h *FileHandler) SoftDelete(c *gin.Context) {
 	fileID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		zap.S().Errorf("转换FileID失败: %v", err)
-		util.Error(c, 400, err.Error())
+		util.Error(c, 500, err.Error())
 		return
 	}
 
@@ -1294,7 +1294,7 @@ func (h *FileHandler) SoftDelete(c *gin.Context) {
 	err = h.fileService.SoftDelete(userID, int(fileID))
 	if err != nil {
 		zap.S().Errorf("软删除文件失败: %v", err)
-		util.Error(c, 400, err.Error())
+		util.Error(c, 500, err.Error())
 		return
 	}
 
@@ -1334,14 +1334,14 @@ func (h *FileHandler) RecoverFile(c *gin.Context) {
 	fileID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		zap.S().Errorf("转换FileID失败: %v", err)
-		util.Error(c, 400, err.Error())
+		util.Error(c, 500, err.Error())
 	}
 
 	//服务层
 	err = h.fileService.RecoverFile(userID, int(fileID))
 	if err != nil {
 		zap.S().Errorf("恢复文件失败: %v", err)
-		util.Error(c, 400, err.Error())
+		util.Error(c, 500, err.Error())
 	}
 
 	zap.L().Info("恢复文件请求结束",

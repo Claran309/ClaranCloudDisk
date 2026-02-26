@@ -51,18 +51,18 @@ func (s *UserService) Register(req *model.RegisterRequest) (*model.User, *model.
 		}
 	}
 	if flagPassword {
-		return nil, nil, errors.New("password format Error")
+		return nil, nil, errors.New("password format Error" + err.Error())
 	}
 
 	//邮箱是否符合格式
 	if !strings.Contains(req.Email, "@") {
-		return nil, nil, errors.New("email format Error")
+		return nil, nil, errors.New("email format Error" + err.Error())
 	}
 
 	//加密密码
 	hashedPassword, err := util.HashPassword(req.Password)
 	if err != nil {
-		return nil, nil, errors.New("password hash failed")
+		return nil, nil, errors.New("password hash failed" + err.Error())
 	}
 
 	//创建用户
@@ -89,7 +89,7 @@ func (s *UserService) Register(req *model.RegisterRequest) (*model.User, *model.
 	//使用邀请码
 	err = s.UserRepo.UseInvitationCode(invitationCode.Code, user.UserID)
 	if err != nil {
-		return nil, nil, errors.New("使用邀请码时出现错误")
+		return nil, nil, errors.New("使用邀请码时出现错误" + err.Error())
 	}
 
 	return user, &invitationCode, nil
@@ -141,7 +141,7 @@ func (s *UserService) Login(loginKey, password string) (string, *model.User, err
 	//refresh token
 	refreshToken, err := s.jwtUtil.GenerateToken(user.UserID, user.Username, user.Role, 255)
 	if err != nil {
-		return "", nil, errors.New("token Error"), ""
+		return "", nil, errors.New("token Error" + err.Error()), ""
 	}
 
 	return token, user, nil, refreshToken
@@ -151,13 +151,13 @@ func (s *UserService) Refresh(refreshToken model.RefreshTokenRequest) (string, e
 	//验证token
 	token, err := s.jwtUtil.ValidateToken(refreshToken.RefreshToken)
 	if err != nil {
-		return "", errors.New("refresh Token Error")
+		return "", errors.New("refresh Token Error" + err.Error())
 	}
 
 	//提取声明
 	claims, err := s.jwtUtil.ExtractClaims(token)
 	if err != nil {
-		return "", errors.New("extract claims failed")
+		return "", errors.New("extract claims failed" + err.Error())
 	}
 
 	var userID int
@@ -167,7 +167,7 @@ func (s *UserService) Refresh(refreshToken model.RefreshTokenRequest) (string, e
 	}
 	newToken, err := s.jwtUtil.GenerateToken(userID, claims["username"].(string), claims["role"].(string), 1)
 	if err != nil {
-		return "", errors.New("token generate failed")
+		return "", errors.New("token generate failed" + err.Error())
 	}
 
 	return newToken, nil
@@ -176,7 +176,7 @@ func (s *UserService) Refresh(refreshToken model.RefreshTokenRequest) (string, e
 func (s *UserService) CheckStorage(UserID int) (int64, error) {
 	UsedStorage, err := s.UserRepo.GetStorage(UserID)
 	if err != nil {
-		return -1, errors.New("get storage failed")
+		return -1, errors.New("get storage failed" + err.Error())
 	}
 	return UsedStorage, nil
 }
@@ -230,7 +230,7 @@ func (s *UserService) UpdateInfo(UserID int, req model.UpdateRequest) (model.Use
 		//加密密码
 		hashedPassword, err := util.HashPassword(req.Password)
 		if err != nil {
-			return model.User{}, errors.New("password hash failed")
+			return model.User{}, errors.New("password hash failed" + err.Error())
 		}
 		err = s.UserRepo.UpdatePassword(UserID, hashedPassword)
 		if err != nil {
@@ -249,7 +249,7 @@ func (s *UserService) UpdateInfo(UserID int, req model.UpdateRequest) (model.Use
 func (s *UserService) GenerateInvitationCode(userID int) (model.InvitationCode, error) {
 	user, err := s.UserRepo.SelectByUserID(userID)
 	if err != nil {
-		return model.InvitationCode{}, errors.New("user not found")
+		return model.InvitationCode{}, errors.New("user not found" + err.Error())
 	}
 	//判定是否超出非admin生成数量
 	if user.Role != "admin" {
@@ -274,7 +274,7 @@ func (s *UserService) GenerateInvitationCode(userID int) (model.InvitationCode, 
 	for i := 0; i < 10; i++ {
 		n, err := rand.Int(rand.Reader, big.NewInt(62))
 		if err != nil {
-			return model.InvitationCode{}, errors.New("rand error")
+			return model.InvitationCode{}, errors.New("rand error" + err.Error())
 		}
 		inviteCode[i] = charset[n.Int64()]
 	}
@@ -288,12 +288,12 @@ func (s *UserService) GenerateInvitationCode(userID int) (model.InvitationCode, 
 	//保存邀请码
 	err = s.UserRepo.CreateInvitationCode(invitationCode)
 	if err != nil {
-		return model.InvitationCode{}, errors.New("create invitation code failed")
+		return model.InvitationCode{}, errors.New("create invitation code failed" + err.Error())
 	}
 	//更新用户邀请码数量
 	err = s.UserRepo.AddInvitationCodeNum(userID)
 	if err != nil {
-		return model.InvitationCode{}, errors.New("add invitation code failed")
+		return model.InvitationCode{}, errors.New("add invitation code failed" + err.Error())
 	}
 
 	return invitationCode, nil
@@ -302,7 +302,7 @@ func (s *UserService) GenerateInvitationCode(userID int) (model.InvitationCode, 
 func (s *UserService) InvitationCodeList(userID int) ([]model.InvitationCode, int64, error) {
 	invitationCodes, total, err := s.UserRepo.GetInvitationCodeList(userID)
 	if err != nil {
-		return nil, -1, errors.New("get invitation code list failed")
+		return nil, -1, errors.New("get invitation code list failed" + err.Error())
 	}
 	return invitationCodes, total, nil
 }
@@ -339,7 +339,7 @@ func (s *UserService) UploadAvatar(file *multipart.FileHeader, userID int, userN
 	// 打开文件
 	src, err := file.Open()
 	if err != nil {
-		return "", "", "", errors.New("无法打开文件")
+		return "", "", "", errors.New("无法打开文件" + err.Error())
 	}
 	defer src.Close()
 
@@ -364,7 +364,7 @@ func (s *UserService) UploadAvatar(file *multipart.FileHeader, userID int, userN
 	//获取字节数组
 	bytes, err := io.ReadAll(src)
 	if err != nil {
-		return "", "", "", errors.New("读取文件失败")
+		return "", "", "", errors.New("读取文件失败" + err.Error())
 	}
 
 	// 创建目标文件
@@ -416,7 +416,7 @@ func (s *UserService) GetAvatar(userID int) (string, error) {
 	//访问数据层
 	avatarPath, err := s.UserRepo.GetAvatar(userID)
 	if err != nil {
-		return "", errors.New("get avatar failed")
+		return "", errors.New("get avatar failed" + err.Error())
 	}
 	return avatarPath, nil
 }

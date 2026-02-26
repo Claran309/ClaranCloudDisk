@@ -284,7 +284,7 @@ func (h *UserHandler) Update(c *gin.Context) {
 	//调用服务层
 	user, err := h.userService.UpdateInfo(UserID.(int), req)
 	if err != nil {
-		zap.S().Errorf("更新用户信息: %v", err)
+		zap.S().Errorf("更新用户信息失败: %v", err)
 		util.Error(c, 500, "UpdateInfo failed")
 	}
 

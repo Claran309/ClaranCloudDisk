@@ -61,7 +61,7 @@ func (s *VerificationService) SendVerificationCode(ctx context.Context, req mode
 	for i := 0; i < 6; i++ {
 		n, err := rand.Int(rand.Reader, big.NewInt(10))
 		if err != nil {
-			return errors.New("rand error")
+			return errors.New("rand error" + err.Error())
 		}
 		basicCode[i] = charset[n.Int64()]
 	}
@@ -111,7 +111,7 @@ func (s *VerificationService) VerifyVerificationCode(ctx context.Context, req mo
 	// 删除验证码
 	err = s.verificationCache.DeleteVerificationCode(ctx, req.Email)
 	if err != nil {
-		return true, errors.New("删除验证码失败")
+		return true, errors.New("删除验证码失败" + err.Error())
 	}
 
 	return true, nil

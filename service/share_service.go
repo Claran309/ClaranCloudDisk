@@ -76,7 +76,7 @@ func (s *ShareService) DeleteShare(ctx context.Context, userID uint, uniqueID st
 	// 获取分享信息
 	share, err := s.shareRepo.GetShareByUniqueID(ctx, uniqueID)
 	if err != nil {
-		return errors.New("分享不存在")
+		return errors.New("分享不存在" + err.Error())
 	}
 
 	// 验证权限
@@ -144,7 +144,7 @@ func (s *ShareService) DownloadSpecFile(ctx context.Context, uniqueID, password 
 	// 验证分享访问权限
 	share, err := s.shareRepo.GetShareByUniqueID(ctx, uniqueID)
 	if err != nil {
-		return nil, -1, errors.New("分享不存在")
+		return nil, -1, errors.New("分享不存在" + err.Error())
 	}
 
 	if s.shareRepo.IsExp(share) {
@@ -161,7 +161,7 @@ func (s *ShareService) DownloadSpecFile(ctx context.Context, uniqueID, password 
 		if shareFile.FileID == fileID {
 			file, err := s.fileRepo.FindByID(ctx, fileID)
 			if err != nil {
-				return nil, -1, errors.New("文件不存在")
+				return nil, -1, errors.New("文件不存在" + err.Error())
 			}
 			targetFile = file
 			break
@@ -175,7 +175,7 @@ func (s *ShareService) DownloadSpecFile(ctx context.Context, uniqueID, password 
 	//获取信息
 	isVIP, err := s.userRepo.GetVIP(userID)
 	if err != nil {
-		return nil, -1, fmt.Errorf("获取用户信息失败")
+		return nil, -1, fmt.Errorf("获取用户信息失败: %v", err)
 	}
 	LimitedSpeed := s.LimitedSpeed
 	user, _ := s.userRepo.SelectByUserID(int(userID))
