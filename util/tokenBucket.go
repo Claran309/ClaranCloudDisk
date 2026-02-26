@@ -35,7 +35,7 @@ func (tb *TokenBucket) AllowN(n float64) bool {
 	// 更新桶内令牌
 	now := time.Now()
 	passedTime := now.Sub(tb.lastTime).Seconds()
-	tb.tokens = tb.rate * passedTime
+	tb.tokens += tb.rate * passedTime
 	if tb.tokens > tb.capacity {
 		tb.tokens = tb.capacity
 	}
